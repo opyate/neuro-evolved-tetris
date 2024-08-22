@@ -3,7 +3,7 @@
  * 
  * It's decoupled from any rendering logic and game loops bound to a set FPS.
  * 
- * The engine can be initialised with any grid size, shapes, and scores.
+ * The engine can be initialised with any grid size.
  * 
  * Shapes and scores go hand in hand, where the score is based on the number of lines cleared.
  * So, if one of the shapes' longest side is 6, then the scores array has to

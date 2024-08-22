@@ -26,21 +26,12 @@ function setup() {
 }
 
 var frameCount = 0;
-var drawTicks = 0;
 function draw() {
     let doTick = false;
     frameCount++;
     if (frameCount === FRAMES_UNTIL_TICK) {
         frameCount = 0;
         doTick = true;
-    }
-
-    // draw occasionally
-    let doDraw = false;
-    drawTicks++;
-    if (drawTicks % Math.ceil(frameRate()) === 0) {
-        drawTicks = 0;
-        doDraw = true;
     }
 
     let countAlive = 0;
@@ -51,17 +42,10 @@ function draw() {
             countAlive++;
 
             // draw the game
-            if (doDraw) {
-                drawGame(robot, robotIdx);
-            } else {
-                drawGame(robot, robotIdx);
-            }
+            drawGame(robot, robotIdx);
         }
 
         robotIdx++;
-    }
-    if (doDraw) {
-        console.log("FPS: " + frameRate());
     }
 
     if (countAlive === 0) {
@@ -133,7 +117,7 @@ function drawGame(robot, robotIdx) {
 }
 
 function startNewRound() {
-    console.log("Starting new round, FPS = " + frameRate());
+    console.log("Starting new round");
     normalizeFitness();
     reproduction();
 
