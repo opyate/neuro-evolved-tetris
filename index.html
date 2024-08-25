@@ -19,13 +19,14 @@
   <script>
     const BLOCK_SIZE_PIXELS = 5;
     const NUMBER_OF_GAMES = parseInt(new URLSearchParams(window.location.search).get('games')) || 16;
+    const NUMBER_OF_VISIBLE_GAMES = 96;
     const WIDTH = 10;
     const HEIGHT = 10;
-    const gridSize = calculateGridSize(NUMBER_OF_GAMES, window.innerWidth, window.innerHeight);
+    const gridSize = calculateGridSize(NUMBER_OF_VISIBLE_GAMES, window.innerWidth, window.innerHeight);
     const COLS = gridSize.gridWidth;
     const ROWS = gridSize.gridHeight;
     // regardless of framerate, we want the game to tick every this many frames
-    const FRAMES_UNTIL_TICK = 8;
+    const FRAMES_UNTIL_TICK = 15;
   </script>
   <script src="tetris-engine.js"></script>
   <script src="tetris-robot.js"></script>

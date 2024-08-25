@@ -25,12 +25,13 @@ function setup() {
     background(255);
 }
 
-var frameCount = 0;
+let frameCountTick = 0;
 function draw() {
+    // do tick?
     let doTick = false;
-    frameCount++;
-    if (frameCount === FRAMES_UNTIL_TICK) {
-        frameCount = 0;
+    frameCountTick++;
+    if (frameCountTick === FRAMES_UNTIL_TICK) {
+        frameCountTick = 0;
         doTick = true;
     }
 
@@ -41,16 +42,49 @@ function draw() {
             robot.thinkThenMove(doTick);
             countAlive++;
 
-            // draw the game
+            // draw the robot's game
             drawGame(robot, robotIdx);
         }
 
         robotIdx++;
     }
 
+    // Even with all robot draws commented, the frame rate is very low because of 'thinkThenMove'
+    // robotIdx = 0;
+    // for (let robot of getTopNRobots(NUMBER_OF_VISIBLE_GAMES)) {
+    //     // draw the robot's game
+    //     drawGame(robot, robotIdx);
+    //     robotIdx++;
+    // }
+
     if (countAlive === 0) {
         startNewRound()
     }
+}
+
+/**
+ * Get the N top scoring robots, preferably alive.
+ * 
+ * @param {*} N 
+ * @returns 
+ */
+function getTopNRobots(N) {
+    let topRobots = robots
+        .filter(robot => !robot.engine.isGameOver)
+        .sort((a, b) => b.engine.score - a.engine.score)
+        .slice(0, N);
+
+    if (topRobots.length < N) {
+        const remainingSpots = N - topRobots.length;
+        const additionalRobots = robots
+            .filter(robot => robot.engine.isGameOver)
+            .sort((a, b) => b.engine.score - a.engine.score)
+            .slice(0, remainingSpots);
+
+        topRobots = topRobots.concat(additionalRobots);
+    }
+
+    return topRobots;
 }
 
 function getColour(cellValue, robot) {
