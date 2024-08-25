@@ -151,13 +151,13 @@
 
         // counter-clockwise rotation
         document.getElementById('rotate-left-button').addEventListener('click', () => {
-            engine.rotatePiece(-1);
+            engine.movePiece("rotate_ccw");
             renderGrid();
         });
 
         // clockwise rotation
         document.getElementById('rotate-right-button').addEventListener('click', () => {
-            engine.rotatePiece(1);
+            engine.movePiece("rotate_cw");
             renderGrid();
         });
 

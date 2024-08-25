@@ -189,8 +189,11 @@ class TetrisEngine {
         this.currentPiece = null;
         this.nextPiece = null;
         this.bag = []; // For "bag of seven" piece generation
-        this.score = 0;
+        this.scoreForCurrentTick = 0;
+        this.totalScore = 0;
         this.isGameOver = false;
+        this.movesMade = [];
+        this.countTicks = 0;
         this.wallKickCache = {}; // to prevent hovering pieces
         this.generateNewPiece(); // Start with a piece
         this.updateGrid();
@@ -252,9 +255,69 @@ class TetrisEngine {
         }
     }
 
+    hasSingleRepetitions() {
+        const N = 20;
+
+        // Ensure there are at least N moves to check
+        if (this.movesMade.length < N) {
+            return false;
+        }
+
+        // we don't care if the last move was up or down,
+        // because those moves progresses the game
+        const lastMove = this.movesMade.slice(-1);
+        if (lastMove === "up" || lastMove === "down") {
+            return false;
+        }
+
+        const lastNMoves = this.movesMade.slice(-N);
+
+        // Check for single repetition (e.g., right,right,right)
+        return lastNMoves.every(move => move === lastNMoves[0]);
+    }
+
+    hasDoubleRepetitions() {
+        const N = 30;
+
+        // Ensure there are at least N moves to check
+        if (this.movesMade.length < N) {
+            return false;
+        }
+
+        // we don't care if the last move was up or down,
+        // because those moves progresses the game
+        const lastMove = this.movesMade.slice(-1);
+        if (lastMove === "up" || lastMove === "down") {
+            return false;
+        }
+
+        const lastNMoves = this.movesMade.slice(-N);
+
+        // for l,r,l,r,l,r, get first = l,l,l and second = r,r,r
+        const firstMoves = lastNMoves.filter((_, i) => i % 2 === 0);
+        const secondMoves = lastNMoves.filter((_, i) => i % 2 === 1);
+
+        const firstMoveRepetition = firstMoves.every(move => move === firstMoves[0]);
+        const secondMoveRepetition = secondMoves.every(move => move === secondMoves[0]);
+
+        return firstMoveRepetition && secondMoveRepetition;
+    }
+
+    /**
+     * Some bots get stuck in an endless loop of making the same moves.
+     * This method checks for repetitions in the last few moves.
+     * 
+     * @returns true or false
+     */
+    hasRepetitions() {
+        return this.hasSingleRepetitions() || this.hasDoubleRepetitions();
+    }
+
     tick() {
         if (this.isGameOver) return;
         if (!this.currentPiece) return; // No piece in play
+        this.countTicks++;
+        this.scoreForCurrentTick = 0; // Reset score for this tick
 
         // Attempt to move down
         if (this.isValidMove(this.currentPiece.x, this.currentPiece.y + 1, this.currentPiece.rotation)) {
@@ -288,55 +351,56 @@ class TetrisEngine {
     movePiece(move) {
         if (this.isGameOver) return;
         if (!this.currentPiece) return;
+        this.movesMade.push(move);
 
-        if (move === "up") {
-            // Instant Drop
-            while (this.isValidMove(this.currentPiece.x, this.currentPiece.y + 1, this.currentPiece.rotation)) {
-                this.currentPiece.y++;
-            }
-            this.lockPiece();
-            this.clearLines();
-            this.currentPiece = this.nextPiece;
-            this.generateNextPiece();
-            if (!this.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.rotation)) {
-                this.isGameOver = true;
-            }
-        } else if (move === "down") {
-            // Soft Drop 
-            if (this.isValidMove(this.currentPiece.x, this.currentPiece.y + 1, this.currentPiece.rotation)) {
-                this.currentPiece.y++;
-            }
-        } else if (move === "left" && this.isValidMove(this.currentPiece.x - 1, this.currentPiece.y, this.currentPiece.rotation)) {
-            this.currentPiece.x--;
-        } else if (move === "right" && this.isValidMove(this.currentPiece.x + 1, this.currentPiece.y, this.currentPiece.rotation)) {
-            this.currentPiece.x++;
+        if (this.hasRepetitions()) {
+            this.isGameOver = true;
+            this.updateGrid();
+            return;
         }
 
-        this.updateGrid();
-    }
+        switch (move) {
+            case "up":  // Instant Drop
+                while (this.isValidMove(this.currentPiece.x, this.currentPiece.y + 1, this.currentPiece.rotation)) {
+                    this.currentPiece.y++;
+                }
+                this.lockPiece();
+                this.clearLines();
+                this.currentPiece = this.nextPiece;
+                this.generateNextPiece();
+                if (!this.isValidMove(this.currentPiece.x, this.currentPiece.y, this.currentPiece.rotation)) {
+                    this.isGameOver = true;
+                }
+                this.updateGrid();
+                break;
+            case "down":  // Soft Drop
+                if (this.isValidMove(this.currentPiece.x, this.currentPiece.y + 1, this.currentPiece.rotation)) {
+                    this.currentPiece.y++;
+                    this.updateGrid();
+                }
+                break;
+            case "left":
 
-    moveLeft() {
-        this.movePiece("left");
-    }
-
-    moveRight() {
-        this.movePiece("right");
-    }
-
-    moveDown() {
-        this.movePiece("down");
-    }
-
-    moveUp() {
-        this.movePiece("up");
-    }
-
-    rotateClockwise() {
-        this.rotatePiece(1);
-    }
-
-    rotateCounterClockwise() {
-        this.rotatePiece(-1);
+                if (this.isValidMove(this.currentPiece.x - 1, this.currentPiece.y, this.currentPiece.rotation)) {
+                    this.currentPiece.x--;
+                    this.updateGrid();
+                }
+                break;
+            case "right":
+                if (this.isValidMove(this.currentPiece.x + 1, this.currentPiece.y, this.currentPiece.rotation)) {
+                    this.currentPiece.x++;
+                    this.updateGrid();
+                }
+                break;
+            case "rotate_cw":
+                this.rotatePiece(1); // calls updateGrid()
+                break;
+            case "rotate_ccw":
+                this.rotatePiece(-1); // calls updateGrid()
+                break;
+            default:
+                break;
+        }
     }
 
     /**
@@ -417,11 +481,8 @@ class TetrisEngine {
         }
 
         // Update score based on linesCleared
-        const addToScore = this.scores[linesCleared];
-        if (linesCleared > 0) {
-            // console.log("Scored " + addToScore + " for clearing " + linesCleared + " lines!");
-        }
-        this.score += addToScore;
+        this.scoreForCurrentTick = this.scores[linesCleared];
+        this.totalScore += this.scoreForCurrentTick;
     }
 
     getPieceShape(type, rotation) {
