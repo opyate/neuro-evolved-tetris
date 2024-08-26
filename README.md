@@ -1,4 +1,4 @@
-
+v1 - run everything in single thread
 
 
 # TODO
