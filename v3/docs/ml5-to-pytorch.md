@@ -1,3 +1,7 @@
+# Intro
+
+Analyse the ml5.js / Tensorflow code to see what it does under the hood, so we can replicate it in PyTorch.
+
 # Analysis of ml5.js
 
 ```
