@@ -16,7 +16,7 @@ One web worker per bot, static HTML, however with a simple web server so web wor
 
 See [v2/README.md](v2/README.md)
 
-## v3
+## v3 (WIP)
 
 Client/server setup, with ported PyTorch code.
 
