@@ -33,7 +33,9 @@ def mutate(network, mutation_rate=0.01):
     for param in network.parameters():
         # Randomly select weights to mutate
         mask = torch.rand(param.shape) < mutation_rate
-        # Add small random noise to the selected weights
-        param.data += (
-            torch.randn(param.shape) * mask * 0.1
-        )  # Adjust 0.1 for mutation strength
+
+        # Generate Gaussian noise (mean=0, std_dev=1)
+        mutation = torch.randn(param.shape)
+
+        # Apply mutation and clamp weights between -1 and 1
+        param.data = torch.clamp(param.data + mutation * mask, -1, 1)

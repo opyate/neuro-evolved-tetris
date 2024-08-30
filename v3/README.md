@@ -7,9 +7,11 @@ Client: similar to v1/v2 p5/canvas HTML to render simulations, but getting board
 
 As the Tetris engine is not tied to game loops or rendering logic, potentially warm up the bots first with thousands/millions of iterations and check for scoring before we start rendering anything. 
 
-# Run
+# Setup
 
 ```
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 pip3 install torch --index-url https://download.pytorch.org/whl/cu124
 ```
