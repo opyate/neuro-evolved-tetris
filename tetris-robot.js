@@ -69,9 +69,9 @@ class TetrisRobot {
         this.engine.movePiece(results[0].label);
 
         // incentivise movement
-        // if (results[0].label !== "noop") {
-        //     this.fitness += 1;
-        // }
+        if (results[0].label !== "noop") {
+            this.fitness += 1;
+        }
 
         // uncomment this to see the grids fill up on the right
         // if (results[0].label === "right") {
@@ -79,6 +79,9 @@ class TetrisRobot {
         // }
 
         if (doTick) {
+            // incentivise longevity
+            this.fitness += 1;
+
             this.engine.tick();
             // if a bot learns to press up/down more often,
             // and not wait for game ticks to progress the piece,
