@@ -464,24 +464,24 @@ class TetrisEngine {
      * as per https://tetris.wiki/Scoring
      */
     clearLines() {
-        let linesCleared = 0;
+        const fullRowIndices = []; // Array to store indices of full rows
 
         for (let row = this.height - 1; row >= 0; row--) { // Start from the bottom
             if (this.grid[row].every(cell => cell !== 0)) { // Full row
-                linesCleared++;
+                fullRowIndices.push(row);
             }
         }
 
-        if (linesCleared === 0) return; // No lines to clear
+        if (fullRowIndices.length === 0) return; // No lines to clear
 
         // Remove full rows and shift down
-        for (let idx = 0; idx < linesCleared; idx++) {
-            this.grid.splice(this.height - 1, 1); // Remove the last row
+        for (const rowIndex of fullRowIndices) {
+            this.grid.splice(rowIndex, 1); // Remove the row at the specific index
             this.grid.unshift(Array(this.width).fill(0)); // Add empty row at the top
         }
 
         // Update score based on linesCleared
-        this.scoreForCurrentTick = this.scores[linesCleared];
+        this.scoreForCurrentTick = this.scores[fullRowIndices.length];
         this.totalScore += this.scoreForCurrentTick;
     }
 
