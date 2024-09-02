@@ -115,6 +115,8 @@ class TetrisRobot {
         child.mutate(0.01);
 
         // re-init with new brain
+        // Note that this doesn't affect other crossovers, as init
+        // does not save the brains to IndexedDB.
         this.init(this.id, this.width, this.height, child);
     }
 }

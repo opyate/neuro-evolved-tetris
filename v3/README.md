@@ -14,4 +14,23 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pip3 install torch --index-url https://download.pytorch.org/whl/cu124
+echo PYTHONPATH=$(pwd) > .env
+```
+
+# Run
+
+```
+fastapi dev app/server.py
+```
+
+Then visit
+
+http://127.0.0.1:8000/
+
+# Debug
+
+See the debug string for the first bot:
+
+```
+curl http://127.0.0.1:8000/state | jq '.latest_bot_states.bots[0].debug'
 ```

@@ -56,6 +56,7 @@ function draw() {
 function getColour(cellValue, robot) {
     if (robot.engine.score > 0) {
         if (cellValue === 0) {
+            // highlight the scoring workers with a light pink background
             return color("#fee6fa");
         }
     }
@@ -63,6 +64,7 @@ function getColour(cellValue, robot) {
         if (cellValue === 0) {
             return color(255);
         } else {
+            // game over is grayed out
             return color(127 + 64);
         }
     }
@@ -86,6 +88,7 @@ function getColour(cellValue, robot) {
         case "L":
             return color(255, 204, 153);  // Soft Orange
         default:
+            // shouldn't happen
             console.error("Unknown cell value: " + cellValue);
             return color(255);
     }
