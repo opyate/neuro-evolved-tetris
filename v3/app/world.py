@@ -109,7 +109,13 @@ def process_event(
 
     if all_game_over:
         total_fitness = sum(bot.fitness for bot in bots)
-        print(f"all dead, total_fitness={total_fitness}", flush=True)
+        mean_fitness = total_fitness / len(bots)
+        min_fitness = min(bot.fitness for bot in bots)
+        max_fitness = max(bot.fitness for bot in bots)
+        print(
+            f"fitness, mean={mean_fitness:.2f}, min={min_fitness:.2f}, max={max_fitness:.2f}",
+            flush=True,
+        )
 
         crossover_futures = [
             executor.submit(crossover_with_fittest, bot, bots, total_fitness)
