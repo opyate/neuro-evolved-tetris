@@ -1,21 +1,33 @@
 import asyncio
-from fastapi import (
-    FastAPI,
-    WebSocket,
-    WebSocketDisconnect,
-)
+import cProfile
+from contextlib import asynccontextmanager
+
+from app.world import run_bots_continuous, stop_bots
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 from starlette.types import Scope
-from app.world import run_bots_continuous, stop_bots
-
-
-# TODO https://github.com/encode/broadcaster
 
 latest_bot_states = {}
 # Global task variable to keep track of the running simulation
 current_simulation_task = None
+use_profiler = False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if use_profiler:
+        profiler = cProfile.Profile()
+        profiler.enable()
+
+    yield
+    await stop()
+
+    if use_profiler:
+        profiler.disable()  # Stop profiling
+        profiler.dump_stats("profiling_results.prof")
+        # profiler.print_stats(sort="cumtime")
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -28,7 +40,7 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 
 
@@ -39,12 +51,12 @@ async def favicon():
 
 @app.get("/")
 async def root():
-    await stop()
     return FileResponse("static/index.html")
 
 
 @app.get("/start")
 async def start(n: int = 10):
+    print("/start")
     global current_simulation_task
     if current_simulation_task:
         return {"message": "Simulation already running"}
@@ -58,12 +70,14 @@ async def start(n: int = 10):
 
 @app.get("/stop")
 async def stop():
+    print("/stop")
+    await stop_bots()
+
     global current_simulation_task
     if current_simulation_task:
         current_simulation_task.cancel()  # Cancel the current simulation task
         current_simulation_task = None
-    await stop_bots()  # Clean up resources
-    latest_bot_states = {}
+
     return {"message": "Stopped all bots"}
 
 

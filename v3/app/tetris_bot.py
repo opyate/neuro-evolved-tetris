@@ -53,15 +53,16 @@ class TetrisBot:
         Returns:
             torch.Tensor: Inputs for the neural network
         """
-        inputs = []
+        inputs = torch.zeros(self.height * self.width, dtype=torch.float32)
+        index = 0
         for row in range(self.height):
             for col in range(self.width):
                 cell_value = self.engine.grid[row][col]
-                if isinstance(cell_value, int):
-                    inputs.append(float(cell_value))
-                else:
-                    inputs.append(0.5)  # Locked pieces as 0.5
-        return torch.tensor(inputs).float()
+                inputs[index] = (
+                    float(cell_value) if isinstance(cell_value, int) else 0.5
+                )
+                index += 1
+        return inputs
 
     def think_then_move(self, do_tick: bool = False) -> bool:
         if self.engine.is_game_over:
@@ -95,11 +96,13 @@ class TetrisBot:
 
         return True
 
-    def get_state(self) -> dict:
-        debug_str = "x" if self.engine.is_game_over else "."
-        debug_str += "".join(
-            str(num) for sublist in self.engine.grid for num in sublist
-        )
+    def get_state(self, debug=False) -> dict:
+        debug_str = ""
+        if debug:
+            debug_str = "x" if self.engine.is_game_over else "."
+            debug_str += "".join(
+                str(num) for sublist in self.engine.grid for num in sublist
+            )
 
         return {
             "id": self.id,

@@ -1,15 +1,22 @@
-import concurrent.futures
-import threading
 import asyncio
-from typing import List, Dict
-from app.tetris_bot import TetrisBot
-from itertools import chain
+import concurrent.futures
 import os
 import random
-from enum import Enum
+import sys
+import time
 import traceback
+from enum import Enum
+from itertools import chain
+from typing import Dict, List
+
+from app.tetris_bot import TetrisBot
 
 cpu_count = os.cpu_count()
+max_workers = cpu_count - 1
+print(f"max_workers: {max_workers}", flush=True)
+log_file = "log.txt"
+log_header = "loop_count,scorer_count,fitness_mean,fitness_min,fitness_max"
+stop_event = asyncio.Event()
 
 
 class EventType(Enum):
@@ -17,22 +24,23 @@ class EventType(Enum):
     MEGATICK = "megatick"
 
 
-# Shared stop event
-stop_event = asyncio.Event()
-
-
-# Function to handle each bot's event
-def handle_bot_event(bot: TetrisBot, event: EventType) -> tuple[Dict, bool]:
+# Function to handle a chunk of bots' events
+def handle_bots_event(
+    bots: List[TetrisBot], event: EventType
+) -> List[tuple[Dict, bool]]:
     do_tick = event == EventType.MEGATICK
-    moved = bot.think_then_move(do_tick)
+    results = []
 
-    # Return the bot's state after processing the event
-    _bot_state = bot.get_state()
-    bot_state = {
-        **_bot_state,
-        "engine": _bot_state["engine"].to_dict(),
-    }
-    return bot_state, moved
+    for bot in bots:
+        moved = bot.think_then_move(do_tick)
+        _bot_state = bot.get_state(debug=False)
+        bot_state = {
+            **_bot_state,
+            "engine": _bot_state["engine"].to_dict(),
+        }
+        results.append((bot_state, moved))
+
+    return results
 
 
 def crossover_with_fittest(bot, bots, total_fitness):
@@ -47,99 +55,72 @@ def crossover_with_fittest(bot, bots, total_fitness):
     return parent_a_index, parent_b_index
 
 
-def process_events(
-    bots: List[TetrisBot],
-    events: List[EventType],
-    state_queue: asyncio.Queue,
-    executor: concurrent.futures.ThreadPoolExecutor,
-):
-    all_game_over = True
-    updated_bot_states = []
-
-    # Dispatch all events for all bots concurrently
-    futures = [
-        executor.submit(handle_bot_event, bot, event)
-        for bot in bots
-        for event in events
-    ]
-
-    # Gather all results and aggregate
-    for future in concurrent.futures.as_completed(futures):
-        bot_state, moved = future.result()
-        all_game_over = all_game_over and not moved
-        updated_bot_states.append(bot_state)
-
-    if all_game_over:
-        total_fitness = sum(bot.fitness for bot in bots)
-
-        futures = [
-            executor.submit(crossover_with_fittest, bot, bots, total_fitness)
-            for bot in bots
-        ]
-
-        for future in concurrent.futures.as_completed(futures):
-            parent_a_index, parent_b_index = future.result()
-
-        for bot in bots:
-            bot.reinit()
-
-    # Put the updated states in the queue for the main loop to consume
-    asyncio.run_coroutine_threadsafe(
-        state_queue.put(updated_bot_states), asyncio.get_running_loop()
-    )
+def chunkify(lst, n):
+    """Splits list into n chunks."""
+    return [lst[i::n] for i in range(n)]
 
 
 def process_event(
-    bots: List[TetrisBot],
+    bot_chunks: List[List[TetrisBot]],
     event: EventType,
     state_queue: asyncio.Queue,
-    executor: concurrent.futures.ThreadPoolExecutor,
+    executor: concurrent.futures.Executor,
 ):
-    all_game_over = True
     updated_bot_states = []
 
-    # Dispatch the event to all bots concurrently
-    futures = [executor.submit(handle_bot_event, bot, event) for bot in bots]
+    # Dispatch the event to each chunk of bots concurrently
+    futures = [executor.submit(handle_bots_event, chunk, event) for chunk in bot_chunks]
 
     # Gather all results and aggregate
     for future in concurrent.futures.as_completed(futures):
-        bot_state, moved = future.result()
-        all_game_over = all_game_over and not moved
-        updated_bot_states.append(bot_state)
-
-    if all_game_over:
-        total_fitness = sum(bot.fitness for bot in bots)
-        mean_fitness = total_fitness / len(bots)
-        min_fitness = min(bot.fitness for bot in bots)
-        max_fitness = max(bot.fitness for bot in bots)
-        print(
-            f"fitness, mean={mean_fitness:.2f}, min={min_fitness:.2f}, max={max_fitness:.2f}",
-            flush=True,
-        )
-
-        crossover_futures = [
-            executor.submit(crossover_with_fittest, bot, bots, total_fitness)
-            for bot in bots
-        ]
-
-        for future in concurrent.futures.as_completed(crossover_futures):
-            try:
-                parent_a_index, parent_b_index = future.result()
-                # print(
-                #     f"parent_a_index={parent_a_index}, parent_b_index={parent_b_index}",
-                #     flush=True,
-                # )
-            except Exception as e:
-                print(f"Crossover Exception: {e}", flush=True)
-                print(traceback.format_exc(), flush=True)
-
-        for bot in bots:
-            bot.reinit()
+        try:
+            bot_results = future.result()
+            updated_bot_states.extend([bot_state for bot_state, _ in bot_results])
+        except Exception as e:
+            print(f"Exception: {e}", flush=True)
+            print(traceback.format_exc(), flush=True)
+            sys.exit(1)
 
     # Put the updated states in the queue for the main loop to consume
     asyncio.run_coroutine_threadsafe(
         state_queue.put(updated_bot_states), asyncio.get_running_loop()
     )
+
+
+def when_all_game_over(
+    bots: List[TetrisBot],
+    executor: concurrent.futures.Executor,
+    loop_count: int = 0,
+):
+    total_fitness = sum(bot.fitness for bot in bots)
+    mean_fitness = total_fitness / len(bots)
+    min_fitness = min(bot.fitness for bot in bots)
+    max_fitness = max(bot.fitness for bot in bots)
+    # number of bots with score > 0
+    scorer_count = sum(1 for bot in bots if bot.engine.total_score > 0)
+
+    log = f"{loop_count},{scorer_count},{mean_fitness:.2f},{min_fitness:.2f},{max_fitness:.2f}"
+    print(
+        log,
+        flush=True,
+    )
+    with open(log_file, "a") as file:
+        file.write(log + "\n")
+
+    futures = [
+        executor.submit(crossover_with_fittest, bot, bots, total_fitness)
+        for bot in bots
+    ]
+
+    try:
+        concurrent.futures.wait(futures)
+    except Exception as e:
+        print(f"Crossover Exception: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
+        sys.exit(1)
+
+    for bot in bots:
+        bot.reinit()
 
 
 def weighted_selection(bots, total_fitness):
@@ -163,34 +144,62 @@ async def run_bots_continuous(n: int, latest_states: Dict, bot_opts: dict = None
         bot_opts = {}
 
     bots = [TetrisBot(i, **bot_opts) for i in range(n)]
+    global max_workers
+    if len(bots) < max_workers:
+        max_workers = len(bots)
+    # Split the bots into chunks
+    bot_chunks = chunkify(bots, max_workers)
+    for i, chunk in enumerate(bot_chunks):
+        print(f"Chunk {i}: {len(chunk)} bots", flush=True)
 
     # Create a queue to safely update latest_states
     state_queue = asyncio.Queue()
 
-    # Create the thread pool once
-
     loop_count = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=cpu_count - 1) as executor:
+    # 8 "tick" events followed by 1 "megatick"
+    events = list(chain.from_iterable([[EventType.TICK] * 8, [EventType.MEGATICK] * 1]))
+
+    # clear log file
+    with open(log_file, "w") as file:
+        print("Clearing log file", flush=True)
+        file.write(log_header + "\n")
+
+    # Create the thread pool once
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        print("Simulation started", flush=True)
         while not stop_event.is_set():
-            # 8 "tick" events followed by 1 "megatick"
-            events = list(
-                chain.from_iterable([[EventType.TICK] * 8, [EventType.MEGATICK] * 1])
-            )
+            loop_count += 1
+
             event_count = 0
             for event in events:
-                process_event(bots, event, state_queue, executor)
+                event_count += 1
+
+                start = time.time()
+                process_event(bot_chunks, event, state_queue, executor)
+                end_process_event = time.time()
 
                 # Get updated states from the queue and update latest_states
                 updated_bot_states = await state_queue.get()
-                # print(f"len of updated_bot_states: {len(updated_bot_states)}")
+                end_get_updated_states = time.time()
+
+                # print(
+                #     f"Process Event: {end_process_event - start:.5f}, Get Updated States: {end_get_updated_states - end_process_event:.5f}",
+                #     flush=True,
+                # )
                 latest_states["bots"] = updated_bot_states
                 latest_states["event_count"] = event_count
                 latest_states["loop_count"] = loop_count
-                event_count += 1
 
-            loop_count += 1
+                # check if all bots are game over
+                all_game_over = all(bot.engine.is_game_over for bot in bots)
+
+                if all_game_over:
+                    when_all_game_over(bots, executor, loop_count)
+                    break
+
             # Control the simulation speed (for example, 60 ticks per second)
             # await asyncio.sleep(1 / 60)
+        print("Simulation stopped", flush=True)
 
 
 async def stop_bots():
