@@ -1,13 +1,13 @@
 # Intro
 
+TL;RD ThreadPoolExecutor doesn't work well, because our task isn't IO-bound, but CPU-bound. TPE still does one thing at a time and has the GIL internally. See experiment 4, where we try Celery workers, so we can give tasks their own process (and own GIL).
+
 v3 of Tetris neuro-evolved NNs which uses a client/server model.
 
 Server: will host the thousands of brains, and use multi-processing for crossover and mutation, and keep brains in memory (less IO).
 Client: similar to v1/v2 p5/canvas HTML to render simulations, but getting board states through web socket.
 
-As the Tetris engine is not tied to game loops or rendering logic, potentially warm up the bots first with thousands/millions of iterations and check for scoring before we start rendering anything. 
-
-Using a ProcessPoolExecutor as informed by https://superfastpython.com/threadpoolexecutor-vs-processpoolexecutor/
+As the Tetris engine is not tied to game loops or rendering logic, potentially warm up the bots first with thousands/millions of iterations and check for scoring before we start rendering anything.
 
 # Setup
 
