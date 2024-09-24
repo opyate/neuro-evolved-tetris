@@ -1,6 +1,8 @@
 import json
 
 import redis
+
+# from app.tetris_bot import TetrisBot
 from app.fake_bot import TetrisBot
 
 # maybe? https://redis.io/docs/latest/develop/connect/clients/python/redis-py/#example-indexing-and-querying-json-documents

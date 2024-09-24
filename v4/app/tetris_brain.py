@@ -17,11 +17,11 @@ class TetrisBrain(nn.Module):
         x = self.softmax(x)
         return x
 
-    def serialize(self):
+    def to_json(self):
         return self.state_dict()
 
     @classmethod
-    def deserialize(cls, data):
+    def from_json(cls, data):
         brain = cls()
         brain.load_state_dict(data)
         return brain

@@ -33,31 +33,6 @@ class TetrisBot:
         else:
             self.brain = TetrisBrain(width, height)
 
-    def serialize(self):
-        return {
-            "id": self.id,
-            "width": self.width,
-            "height": self.height,
-            "fitness": self.fitness,
-            "brain": self.brain.serialize(),
-            "next_brain": self.next_brain.serialize() if self.next_brain else None,
-            "engine": self.engine.serialize(),
-        }
-
-    @classmethod
-    def deserialize(cls, data):
-        bot = cls(
-            data["id"],
-            data["width"],
-            data["height"],
-            TetrisBrain.deserialize(data["brain"]),
-        )
-        bot.fitness = data["fitness"]
-        if data["next_brain"]:
-            bot.next_brain = TetrisBrain.deserialize(data["next_brain"])
-        bot.engine = TetrisEngine.deserialize(data["engine"])
-        return bot
-
     def reinit(self):
         self.brain = self.next_brain
         self.next_brain = None
@@ -121,27 +96,49 @@ class TetrisBot:
 
         return True
 
-    def get_state(self, debug=False) -> dict:
-        debug_str = ""
-        if debug:
-            debug_str = "x" if self.engine.is_game_over else "."
-            debug_str += "".join(
-                str(num) for sublist in self.engine.grid for num in sublist
-            )
-
-        return {
+    def to_json(self, with_brain=False) -> dict:
+        as_dict = {
             "id": self.id,
             "width": self.width,
             "height": self.height,
             "engine": self.engine,
             "fitness": self.fitness,
-            "debug": debug_str,
         }
+
+        if with_brain:
+            as_dict["brain"] = self.brain.to_json
+
+        return as_dict
 
     def crossover(self, parent_a: "TetrisBot", parent_b: "TetrisBot") -> None:
         child_brain = crossover(parent_a.brain, parent_b.brain)
         mutate(child_brain, mutation_rate=0.01)
         self.next_brain = child_brain
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "width": self.width,
+            "height": self.height,
+            "fitness": self.fitness,
+            "brain": self.brain.serialize(),
+            "next_brain": self.next_brain.serialize() if self.next_brain else None,
+            "engine": self.engine.serialize(),
+        }
+
+    @classmethod
+    def deserialize(cls, data):
+        bot = cls(
+            data["id"],
+            data["width"],
+            data["height"],
+            TetrisBrain.deserialize(data["brain"]),
+        )
+        bot.fitness = data["fitness"]
+        if data["next_brain"]:
+            bot.next_brain = TetrisBrain.deserialize(data["next_brain"])
+        bot.engine = TetrisEngine.deserialize(data["engine"])
+        return bot
 
     def save(self, name: str) -> None:
         torch.save(self.brain.state_dict(), f"{name}.pt")

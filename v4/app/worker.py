@@ -8,11 +8,10 @@ from enum import Enum
 from multiprocessing import process
 
 import redis
+from app.db import db_save_all_dict
 
 # from app.tetris_bot import TetrisBot
-from app.db import db_save_all_dict
 from app.fake_bot import TetrisBot
-from app.sandbox import bot
 from app.worker_util import crossover_with_fittest, weighted_selection
 from celery import Celery
 
@@ -53,12 +52,13 @@ def bots_next_round(self, results):
     if not db_result:
         raise Exception("Failed to save bots to Redis")
 
-    time.sleep(10)
-
     print(f"worker pinging server to start next round", flush=True)
-    return urllib.request.urlopen(
+    urllib.request.urlopen(
         f"http://web:8000/start?n={len(bot_dicts)}&f={self.request.id}"
     ).read()
+
+    # TODO change this to the newly-initialised bots
+    return results
 
 
 @celery.task(name="bots_think_then_move", bind=True)

@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 import redis
 from app import driver
 from app.db import db_load_all_dicts, db_save_all
+
+# from app.tetris_bot import TetrisBot
 from app.fake_bot import TetrisBot
 from celery.result import AsyncResult
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
