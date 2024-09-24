@@ -20,6 +20,7 @@ celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://localhost:
 celery.conf.result_backend = os.environ.get(
     "CELERY_RESULT_BACKEND", "redis://localhost:6379"
 )
+celery.conf.result_expires = 60 * 5  # 5 minutes
 
 
 r = redis.Redis(host="redis", port=6379, db=0)
@@ -92,15 +93,13 @@ def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
 
             process_event(bots, event)
 
-            meta = {
-                "count": {
-                    "loop": loop_count,
-                    "event": event_count,
-                },
-                # TODO light serialisation, only for rendering
-                "bots_dict": [bot.to_json() for bot in bots],
-            }
-            self.update_state(state="PROGRESS", meta=meta)
+            # update_state is not useful for our use-case, so we use redis directly instead
+            # self.update_state(state="PROGRESS", meta=meta)
+            db_result = db_save_all_dict(
+                r, [bot.to_json(lite=True) for bot in bots], "render_bot"
+            )
+            if not db_result:
+                raise Exception("Failed to save render_bots to Redis")
 
             # check if all bots are game over
             all_game_over = all(bot.engine.is_game_over for bot in bots)
@@ -109,9 +108,14 @@ def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
                 bot_id_0 = [bot for bot in bots if bot.id == 0]
                 if bot_id_0:
                     print(f">all_game_over: {bot_id_0}", flush=True)
-                meta["all_game_over"] = True
-                # TODO full serialisation, for crossover/mutation/etc
-                return meta
+
+                return {
+                    "count": {
+                        "loop": loop_count,
+                        "event": event_count,
+                    },
+                    "bots_dict": [bot.to_json(lite=False) for bot in bots],
+                }
 
 
 def process_event(bots: list[TetrisBot], event: EventType):

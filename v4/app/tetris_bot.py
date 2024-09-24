@@ -96,7 +96,7 @@ class TetrisBot:
 
         return True
 
-    def to_json(self, with_brain=False) -> dict:
+    def to_json(self, lite=True) -> dict:
         as_dict = {
             "id": self.id,
             "width": self.width,
@@ -105,7 +105,7 @@ class TetrisBot:
             "fitness": self.fitness,
         }
 
-        if with_brain:
+        if not lite:
             as_dict["brain"] = self.brain.to_json
 
         return as_dict

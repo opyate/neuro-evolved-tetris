@@ -47,7 +47,7 @@ class TetrisBot:
     def get_state(self):
         return {"id": self.id, "state": self.state, "engine": self.engine.to_json()}
 
-    def to_json(self):
+    def to_json(self, lite=True):
         return {"id": self.id, "state": self.state, "engine": self.engine.to_json()}
 
     @classmethod

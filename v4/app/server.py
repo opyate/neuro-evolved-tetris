@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 
 import redis
 from app import driver
-from app.db import db_load_all_dicts, db_save_all
+from app.db import db_load_all_dicts, db_load_all_dicts_by_key, db_save_all
 
 # from app.tetris_bot import TetrisBot
 from app.fake_bot import TetrisBot
+from celery import Celery
 from celery.result import AsyncResult
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -14,9 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 from starlette.types import Scope
 
-latest_bot_states = {}
 result = None
 r: redis.Redis = None
+c: Celery = None
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -33,6 +34,9 @@ class NoCacheStaticFiles(StaticFiles):
 async def lifespan(app: FastAPI):
     global r
     r = redis.Redis(host="redis", port=6379, db=0)
+
+    global c
+    c = Celery(__name__)
 
     # smoke test redis:
     # bot_ids = bots = [bot_id for bot_id in range(3)]
@@ -69,6 +73,22 @@ def get_status(task_id):
         "task_result": task_result.result,
     }
     return JSONResponse(dict_result)
+
+
+@app.get("/tasks")
+def tasks():
+    # Inspect the workers
+    inspector = c.control.inspect()
+
+    # Get a list of all active tasks on all workers
+    active_tasks = inspector.active()
+
+    # Extract task IDs from the active tasks
+    all_task_ids = []
+    for worker_tasks in active_tasks.values():
+        all_task_ids.extend(task["id"] for task in worker_tasks)
+
+    return JSONResponse(all_task_ids)
 
 
 @app.get("/start")
@@ -116,6 +136,7 @@ async def job_state():
             # "completed_count": result.completed_count(),
             "is_all_game_over": is_all_game_over,
             "result": result_get,
+            "result_get_force": result.get(),
         }
     else:
         return {"message": "No job started"}
@@ -123,6 +144,8 @@ async def job_state():
 
 @app.get("/state")
 async def state():
+
+    latest_bot_states = db_load_all_dicts_by_key(r, "render_bot")
 
     return {"message": "Latest bot states", "latest_bot_states": latest_bot_states}
 
@@ -134,6 +157,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             if data == "tick":
+                latest_bot_states = "TODO"  # TODO
                 await manager.send(latest_bot_states, websocket)
             else:
                 pass
