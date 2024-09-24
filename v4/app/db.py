@@ -1,4 +1,4 @@
-import json
+import pickle
 
 import redis
 from app.tetris_bot import TetrisBot
@@ -8,13 +8,13 @@ from app.tetris_bot import TetrisBot
 
 def db_save(r: redis.Redis, bot: TetrisBot, key: str = "bot"):
     bot_id = bot.id
-    bot_json = bot.to_dict()
-    ser_bot = json.dumps(bot_json)
+    bot_dict = bot.to_dict()
+    ser_bot = pickle.dumps(bot_dict)
     return r.set(f"{key}:{bot_id}", ser_bot)
 
 
 def db_load(r: redis.Redis, bot_id: int, key: str = "bot") -> TetrisBot:
-    deser_bot = TetrisBot.from_dict(json.loads(r.get(f"{key}:{bot_id}")))
+    deser_bot = TetrisBot.from_dict(pickle.loads(r.get(f"{key}:{bot_id}")))
     return deser_bot
 
 
@@ -31,7 +31,7 @@ def db_save_all_dict(r: redis.Redis, bots: list[dict], key: str = "bot"):
         pipe.multi()
         for bot in bots:
             bot_id = bot["id"]
-            ser_bot = json.dumps(bot)
+            ser_bot = pickle.dumps(bot)
             pipe.set(f"{key}:{bot_id}", ser_bot)
         return all(pipe.execute())
 
@@ -45,7 +45,7 @@ def db_load_all(
             pipe.get(f"{key}:{bot_id}")
         serialized_bots = pipe.execute()
     bots = [
-        TetrisBot.from_dict(json.loads(bot_data))
+        TetrisBot.from_dict(pickle.loads(bot_data))
         for bot_data in serialized_bots
         if bot_data is not None
     ]
@@ -61,7 +61,7 @@ def db_load_all_dicts(
             pipe.get(f"{key}:{bot_id}")
         serialized_bots = pipe.execute()
     bots = [
-        json.loads(bot_data) for bot_data in serialized_bots if bot_data is not None
+        pickle.loads(bot_data) for bot_data in serialized_bots if bot_data is not None
     ]
     return bots
 
@@ -74,6 +74,6 @@ def db_load_all_dicts_by_key(r: redis.Redis, key: str = "bot") -> list[dict]:
             pipe.get(key)
         serialized_bots = pipe.execute()
     bots = [
-        json.loads(bot_data) for bot_data in serialized_bots if bot_data is not None
+        pickle.loads(bot_data) for bot_data in serialized_bots if bot_data is not None
     ]
     return bots

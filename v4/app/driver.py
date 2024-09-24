@@ -28,8 +28,12 @@ def main(bots: list[TetrisBot] | list[dict]) -> AsyncResult:
     if isinstance(bots[0], TetrisBot):
         bots = [bot.to_dict(lite=False) for bot in bots]
 
-    print(f">>> bot type: {type(bots[0])}, bot: {bots[0]}")
+    # print(f">>> bot type: {type(bots[0])}, bot: {bots[0]}")
 
     return chord(
-        (bots_think_then_move.s(bots_slice) for bots_slice in chunkify(bots, num_cores))
+        (
+            bots_think_then_move.s(bots_slice)
+            for bots_slice in chunkify(bots, num_cores)
+            if len(bots_slice) > 0
+        )
     )(bots_next_round.s())

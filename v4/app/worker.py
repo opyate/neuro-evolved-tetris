@@ -10,6 +10,7 @@ from multiprocessing import process
 import redis
 from app.db import db_save_all_dict
 from app.tetris_bot import TetrisBot
+from app.tetris_engine import TetrisEngine
 from app.worker_util import crossover_with_fittest
 from celery import Celery
 
@@ -65,11 +66,12 @@ def bots_next_round(self, results):
 
     bot_dicts = [bot.to_dict(lite=False) for bot in bots]
 
-    bot_id_0 = [bot for bot in bot_dicts if bot["id"] == 0]
-    print(
-        f">bots_next_round: {bot_id_0}",
-        flush=True,
-    )
+    # bot_id_0 = [bot for bot in bot_dicts if bot["id"] == 0]
+    # print(
+    #     f">bots_next_round: {bot_id_0}",
+    #     flush=True,
+    # )
+
     db_result = db_save_all_dict(r, bot_dicts)
     if not db_result:
         raise Exception("Failed to save bots to Redis")
@@ -84,14 +86,14 @@ def bots_next_round(self, results):
 
 
 @celery.task(name="bots_think_then_move", bind=True)
-def bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
+def bots_think_then_move(self, bots: list[TetrisBot]):
     if len(bots) == 0:
         return "no_bots"
     # deserialize bots
     bots = [TetrisBot.from_dict(bot) for bot in bots]
 
     try:
-        return _bots_think_then_move(self, bots, bot_opts)
+        return _bots_think_then_move(self, bots)
     except Exception as e:
         task_id = self.request.id
         print(f"Exception: task={task_id}, exception={e}", flush=True)
@@ -100,9 +102,12 @@ def bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
         raise e
 
 
-def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
-    if bot_opts is None:
-        bot_opts = {}
+def _bots_think_then_move(self, bots: list[TetrisBot]):
+
+    # even thought TetrisEngine has to_dict/from_dict, that's only used for rendering, and
+    # we know we'll always need a fresh engine at this point
+    for bot in bots:
+        bot.engine = TetrisEngine(bot.width, bot.height)
 
     loop_count = 0
     while True:
@@ -113,6 +118,7 @@ def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
             event_count += 1
 
             process_event(bots, event)
+            time.sleep(1.0)
 
             # update_state is not useful for our use-case, so we use redis directly instead
             # self.update_state(state="PROGRESS", meta=meta)
@@ -147,42 +153,8 @@ def process_event(bots: list[TetrisBot], event: EventType):
     do_tick = event == EventType.MEGATICK
 
     for bot in bots:
-        # if bot.id == 0:
-        #     print(f">bot_before: {bot}", flush=True)
+        if bot.id == 0:
+            print(f">bot_before: {bot}", flush=True)
         bot.think_then_move(do_tick)
-        # if bot.id == 0:
-        #     print(f">bot_after: {bot}", flush=True)
-
-
-def when_all_game_over(
-    bots: list[TetrisBot],
-    executor: concurrent.futures.Executor,
-    loop_count: int = 0,
-):
-    total_fitness = sum(bot.fitness for bot in bots)
-    mean_fitness = total_fitness / len(bots)
-    min_fitness = min(bot.fitness for bot in bots)
-    max_fitness = max(bot.fitness for bot in bots)
-    # number of bots with score > 0
-    scorer_count = sum(1 for bot in bots if bot.engine.total_score > 0)
-
-    log = f"{loop_count},{scorer_count},{mean_fitness:.2f},{min_fitness:.2f},{max_fitness:.2f}"
-    print(
-        log,
-        flush=True,
-    )
-
-    futures = [
-        executor.submit(crossover_with_fittest, bot, bots, total_fitness)
-        for bot in bots
-    ]
-
-    try:
-        concurrent.futures.wait(futures)
-    except Exception as e:
-        print(f"Crossover Exception: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
-        sys.exit(1)
-
-    for bot in bots:
-        bot.reinit()
+        if bot.id == 0:
+            print(f">bot_after: {bot}", flush=True)

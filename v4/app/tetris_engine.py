@@ -3,12 +3,18 @@ from typing import Dict, List, Optional, Tuple
 
 
 class TetrisEngine:
-    def __init__(self, width: int = 10, height: int = 20) -> None:
+    def __init__(
+        self, width: int = 10, height: int = 20, grid: list[list[int]] | None = None
+    ) -> None:
         self.width: int = width
         self.height: int = height
-        self.grid: List[List[int]] = [
-            [0 for _ in range(self.width)] for _ in range(self.height)
-        ]
+        if grid is not None:
+            # will only be used for rendering, not playing
+            self.grid = grid
+        else:
+            self.grid: list[list[int]] = [
+                [0 for _ in range(self.width)] for _ in range(self.height)
+            ]
         self.current_piece: Optional[Dict[str, int]] = None
         self.next_piece: Optional[Dict[str, int]] = None
         self.bag: List[str] = []  # For "bag of seven" piece generation
@@ -20,9 +26,16 @@ class TetrisEngine:
         self.wall_kick_cache: Dict[str, bool] = {}  # to prevent hovering pieces
         self.shapes: Dict[str, List[List[List[int]]]] = self.get_shapes()
         self.scores: List[int] = [0, 100, 300, 500, 800]
-        self.is_new_game: bool = True
+
+        if grid is None:
+            self.generate_new_piece()  # Start with a piece
+            self.update_grid()
+
+    def __repr__(self) -> str:
+        return f"TetrisEngine(w={self.width}, h={self.height}, score={self.total_score}, is_game_over={self.is_game_over})"
 
     def to_dict(self) -> Dict:
+        # grid will only ever be serialised for rendering, not playing
         return {
             "width": self.width,
             "height": self.height,
@@ -33,10 +46,9 @@ class TetrisEngine:
 
     @classmethod
     def from_dict(cls, data: Dict) -> "TetrisEngine":
-        engine: TetrisEngine = cls(data["width"], data["height"])
+        engine: TetrisEngine = cls(data["width"], data["height"], data["grid"])
         engine.total_score = data["score"]
         engine.is_game_over = data["is_game_over"]
-        engine.grid = data["grid"]
         return engine
 
     def get_shapes(self) -> Dict[str, List[List[List[int]]]]:
@@ -189,11 +201,6 @@ class TetrisEngine:
     def move_piece(self, move: str) -> None:
         if self.is_game_over or not self.current_piece:
             return
-
-        if self.is_new_game:
-            self.is_new_game = False
-            self.generate_new_piece()  # Start with a piece
-            self.update_grid()
 
         self.moves_made.append(move)
 

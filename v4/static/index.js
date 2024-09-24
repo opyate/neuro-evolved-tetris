@@ -41,8 +41,9 @@ function draw() {
 
     // draw the game
     if (state) {
-        for (let idx in state["bots"]) {
-            const bot = state["bots"][idx];
+        console.log("drawing bots");
+        for (let idx in state) {
+            const bot = state[idx];
             // if (bot.id == 0) {
             //     console.log(`loop ${state["loop_count"]}, event ${state["event_count"]} -> ${bot.debug}`);
             // }
@@ -58,7 +59,7 @@ function getColour(cellValue, robot) {
             return color("#fee6fa");
         }
     }
-    if (robot.engine.isGameOver) {
+    if (robot.engine.is_game_over) {
         if (cellValue === 0) {
             return color(255);
         } else {
@@ -82,7 +83,7 @@ function getColour(cellValue, robot) {
         case "Z":
             return color(255, 153, 153);  // Soft Red
         case "O":
-            return color(255, 255, 153);  // Soft Yellow
+            return color(255, 255, 153 - 50);  // Soft Yellow
         case "L":
             return color(255, 204, 153);  // Soft Orange
         default:

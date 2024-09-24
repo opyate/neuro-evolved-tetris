@@ -101,6 +101,9 @@ class TetrisBot:
         mutate(child_brain, mutation_rate=0.01)
         self.next_brain = child_brain
 
+    def __repr__(self):
+        return f"TetrisBot(id={self.id}, w={self.width}, h={self.height}, fitness={self.fitness}, engine={self.engine})"
+
     def to_dict(self, lite=True) -> dict:
         as_dict = {
             "id": self.id,
