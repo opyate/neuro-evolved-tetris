@@ -70,7 +70,9 @@ def _bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
             all_game_over = all(bot.engine.is_game_over for bot in bots)
 
             if all_game_over:
-                return "all_game_over"
+                meta["all_game_over"] = True
+                meta["version"] = 2
+                return meta
 
 
 # Function to handle a chunk of bots' events
@@ -81,7 +83,8 @@ def process_event(bots: List[TetrisBot], event: EventType) -> List[tuple[Dict, b
     for bot in bots:
         moved = bot.think_then_move(do_tick)
         bot_state = bot.to_json()
-        results.append((bot_state, moved))
+        # results.append((bot_state, moved))
+        results.append(bot_state)
 
     return results
 

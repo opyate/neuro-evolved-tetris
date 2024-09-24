@@ -18,7 +18,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery -A app.worker.celery worker --loglevel=info --logfile=logs/celery.log
+    command: >
+      watchmedo auto-restart
+      --directory=./app
+      --patterns="*.py"
+      --recursive
+      -- celery -A app.worker.celery worker --loglevel=info --logfile=logs/celery.log
     volumes:
       - ./app:/usr/src/app/app
       - ./logs:/usr/src/app/logs

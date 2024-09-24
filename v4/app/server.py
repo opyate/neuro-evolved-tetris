@@ -89,7 +89,7 @@ async def job_state():
         if result.successful():
             # global result
             result_get = result.get()
-            is_all_game_over = all([result == "all_game_over" for result in result_get])
+            is_all_game_over = all([result["all_game_over"] for result in result_get])
 
         return {
             "message": "Latest job state",
