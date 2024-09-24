@@ -1,3 +1,4 @@
+import time
 from contextlib import asynccontextmanager
 
 import redis
@@ -80,8 +81,11 @@ async def start(n: int = 10, f: str = ""):
         return {"message": f"Started {n} bots"}
     else:
 
+        start_time = time.time()
         bots = db_load_all_dicts(r, range(n))
         result = driver.main(bots)
+        end_time = time.time()
+        print(f"New round prep {end_time - start_time:.2f} seconds")
 
         return {"message": f"Next round for {n} bots"}
 

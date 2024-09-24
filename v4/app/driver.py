@@ -5,8 +5,7 @@ from app.worker import bots_next_round, bots_think_then_move
 from celery import chord
 from celery.result import AsyncResult
 
-# TODO free up a core for server?
-num_cores = multiprocessing.cpu_count()
+num_cores = multiprocessing.cpu_count() - 1
 
 
 def chunkify(lst, n):
