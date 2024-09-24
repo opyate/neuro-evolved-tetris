@@ -38,7 +38,6 @@ async def root():
 @app.get("/tasks/{task_id}")
 def get_status(task_id):
     task_result = AsyncResult(task_id)
-    print()
     result = {
         "task_id": task_id,
         "task_status": task_result.status,
@@ -49,7 +48,6 @@ def get_status(task_id):
 
 @app.get("/start")
 async def start(n: int = 10):
-    print("/start")
     global job
 
     if job is None:
@@ -60,19 +58,6 @@ async def start(n: int = 10):
         # Run the group of tasks
         global result
         result = job.apply_async()
-
-        # while not job.ready():
-        #     pass
-
-        # if job.successful():
-        #     pass
-        #     # check game over etc
-
-        # # Optionally, wait for completion and get the results
-        # results = result.get()
-        # all_game_over = all([result["all_game_over"] for result in results])
-        # print("All chunks processed. Combined results:", results)
-        # print("All game over?", all_game_over)
 
         return {"message": f"Started {n} bots"}
     else:
@@ -105,15 +90,9 @@ async def job_state():
         return {"message": "No job started"}
 
 
-@app.get("/stop")
-async def stop():
-    print("/stop")
-
-    return {"message": "Stopped all bots"}
-
-
 @app.get("/state")
 async def state():
+
     return {"message": "Latest bot states", "latest_bot_states": latest_bot_states}
 
 
@@ -124,7 +103,6 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             if data == "tick":
-                # print("tick")
                 await manager.send(latest_bot_states, websocket)
             else:
                 pass
