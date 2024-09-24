@@ -19,6 +19,11 @@ celery.conf.result_backend = os.environ.get(
     "CELERY_RESULT_BACKEND", "redis://localhost:6379"
 )
 celery.conf.result_expires = 60 * 5  # 5 minutes
+celery.conf.event_serializer = "pickle"  # this event_serializer is optional. somehow i missed this when writing this solution and it still worked without.
+celery.conf.task_serializer = "pickle"
+celery.conf.result_serializer = "pickle"
+# celery.conf.accept_content = ["application/x-python-serialize", "pickle"]
+celery.conf.accept_content = ["pickle"]
 
 
 r = redis.Redis(host="redis", port=6379, db=0)

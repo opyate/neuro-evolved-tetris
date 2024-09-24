@@ -1,6 +1,3 @@
-import os
-import tempfile
-
 import torch
 import torch.nn as nn
 
@@ -21,15 +18,12 @@ class TetrisBrain(nn.Module):
         return x
 
     def to_dict(self):
-        with tempfile.NamedTemporaryFile() as f:
-            torch.save(self.state_dict(), f.name)
-            return {"path": f.name}
+        return self.state_dict()
 
     @classmethod
-    def from_dict(cls, data):
-        brain = cls()
-        brain.load_state_dict(torch.load(data["path"]))
-        os.remove(data["path"])
+    def from_dict(cls, width, height, data):
+        brain = cls(width, height)
+        brain.load_state_dict(data)
         return brain
 
 

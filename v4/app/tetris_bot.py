@@ -124,10 +124,12 @@ class TetrisBot:
             data["id"],
             data["width"],
             data["height"],
-            TetrisBrain.from_dict(data["brain"]),
+            TetrisBrain.from_dict(data["width"], data["height"], data["brain"]),
         )
         bot.fitness = data["fitness"]
         if data["next_brain"]:
-            bot.next_brain = TetrisBrain.from_dict(data["next_brain"])
+            bot.next_brain = TetrisBrain.from_dict(
+                data["width"], data["height"], data["next_brain"]
+            )
         bot.engine = TetrisEngine.from_dict(data["engine"])
         return bot

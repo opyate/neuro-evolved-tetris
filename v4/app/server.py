@@ -4,7 +4,6 @@ import redis
 from app import driver
 from app.db import db_load_all_dicts, db_load_all_dicts_by_key
 from app.tetris_bot import TetrisBot
-from celery import Celery
 from celery.result import AsyncResult
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -14,7 +13,6 @@ from starlette.types import Scope
 
 result = None
 r: redis.Redis = None
-c: Celery = None
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -31,9 +29,6 @@ class NoCacheStaticFiles(StaticFiles):
 async def lifespan(app: FastAPI):
     global r
     r = redis.Redis(host="redis", port=6379, db=0)
-
-    global c
-    c = Celery(__name__)
 
     # smoke test redis:
     # bot_ids = bots = [bot_id for bot_id in range(3)]
@@ -70,22 +65,6 @@ def get_status(task_id):
         "task_result": task_result.result,
     }
     return JSONResponse(dict_result)
-
-
-@app.get("/tasks")
-def tasks():
-    # Inspect the workers
-    inspector = c.control.inspect()
-
-    # Get a list of all active tasks on all workers
-    active_tasks = inspector.active()
-
-    # Extract task IDs from the active tasks
-    all_task_ids = []
-    for worker_tasks in active_tasks.values():
-        all_task_ids.extend(task["id"] for task in worker_tasks)
-
-    return JSONResponse(all_task_ids)
 
 
 @app.get("/start")
