@@ -16,7 +16,9 @@ function setup() {
             socket = new WebSocket("ws://localhost:8000/ws");
 
             socket.onmessage = function (event) {
-                state = JSON.parse(event.data);
+                state = {
+                    bots: JSON.parse(event.data),
+                }
             };
 
             socket.onclose = function (event) {
@@ -41,9 +43,8 @@ function draw() {
 
     // draw the game
     if (state) {
-        console.log("drawing bots");
-        for (let idx in state) {
-            const bot = state[idx];
+        for (let idx in state.bots) {
+            const bot = state.bots[idx];
             // if (bot.id == 0) {
             //     console.log(`loop ${state["loop_count"]}, event ${state["event_count"]} -> ${bot.debug}`);
             // }

@@ -88,8 +88,7 @@ async def start(n: int = 10, f: str = ""):
 
 @app.get("/ping")
 async def ping():
-    print(f"I've been pinged, redis: {r.ping()}")
-    return {"message": "pong"}
+    return {"message": "pong", "redis": r.ping()}
 
 
 @app.get("/job")

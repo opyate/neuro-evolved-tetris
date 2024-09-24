@@ -1,11 +1,8 @@
-import concurrent.futures
 import os
-import sys
 import time
 import traceback
 import urllib.request
 from enum import Enum
-from multiprocessing import process
 
 import redis
 from app.db import db_save_all_dict
@@ -41,10 +38,14 @@ events = [EventType.TICK] * 8 + [EventType.MEGATICK] * 1
 @celery.task(name="bots_next_round", bind=True)
 def bots_next_round(self, results):
 
+    start_time = time.time()
+
     bot_dicts = [bot for results_chunk in results for bot in results_chunk["bots_dict"]]
 
     # crossover and mutation, re-init, before saving to Redis
     bots = [TetrisBot.from_dict(bot) for bot in bot_dicts]
+
+    time_deser_bots = time.time()
 
     total_fitness = sum(bot.fitness for bot in bots)
     # mean_fitness = total_fitness / len(bots)
@@ -61,10 +62,15 @@ def bots_next_round(self, results):
 
     for bot in bots:
         crossover_with_fittest(bot, bots, total_fitness)
+
+    time_crossover = time.time()
     for bot in bots:
         bot.reinit()
+    time_reinit = time.time()
 
     bot_dicts = [bot.to_dict(lite=False) for bot in bots]
+
+    time_serialize = time.time()
 
     # bot_id_0 = [bot for bot in bot_dicts if bot["id"] == 0]
     # print(
@@ -75,6 +81,12 @@ def bots_next_round(self, results):
     db_result = db_save_all_dict(r, bot_dicts)
     if not db_result:
         raise Exception("Failed to save bots to Redis")
+
+    time_persist = time.time()
+    print(
+        f">timings: total_time={time_persist - start_time:.2f}, time_deser_bots={time_deser_bots-start_time:.2f}, time_crossover={time_crossover-time_deser_bots:.2f}, time_reinit={time_reinit-time_crossover:.2f}, time_serialize={time_serialize-time_reinit:.2f}, time_persist={time_persist-time_serialize:.2f}",
+        flush=True,
+    )
 
     print(f"worker pinging server to start next round", flush=True)
     urllib.request.urlopen(
@@ -118,7 +130,6 @@ def _bots_think_then_move(self, bots: list[TetrisBot]):
             event_count += 1
 
             process_event(bots, event)
-            time.sleep(1.0)
 
             # update_state is not useful for our use-case, so we use redis directly instead
             # self.update_state(state="PROGRESS", meta=meta)
@@ -153,8 +164,8 @@ def process_event(bots: list[TetrisBot], event: EventType):
     do_tick = event == EventType.MEGATICK
 
     for bot in bots:
-        if bot.id == 0:
-            print(f">bot_before: {bot}", flush=True)
+        # if bot.id == 0:
+        #     print(f">bot_before: {bot}", flush=True)
         bot.think_then_move(do_tick)
-        if bot.id == 0:
-            print(f">bot_after: {bot}", flush=True)
+        # if bot.id == 0:
+        #     print(f">bot_after: {bot}", flush=True)
