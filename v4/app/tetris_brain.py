@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 import torch
 import torch.nn as nn
 
@@ -17,13 +20,16 @@ class TetrisBrain(nn.Module):
         x = self.softmax(x)
         return x
 
-    def to_json(self):
-        return self.state_dict()
+    def to_dict(self):
+        with tempfile.NamedTemporaryFile() as f:
+            torch.save(self.state_dict(), f.name)
+            return {"path": f.name}
 
     @classmethod
-    def from_json(cls, data):
+    def from_dict(cls, data):
         brain = cls()
-        brain.load_state_dict(data)
+        brain.load_state_dict(torch.load(data["path"]))
+        os.remove(data["path"])
         return brain
 
 

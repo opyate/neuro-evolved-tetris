@@ -96,52 +96,38 @@ class TetrisBot:
 
         return True
 
-    def to_json(self, lite=True) -> dict:
-        as_dict = {
-            "id": self.id,
-            "width": self.width,
-            "height": self.height,
-            "engine": self.engine,
-            "fitness": self.fitness,
-        }
-
-        if not lite:
-            as_dict["brain"] = self.brain.to_json
-
-        return as_dict
-
     def crossover(self, parent_a: "TetrisBot", parent_b: "TetrisBot") -> None:
         child_brain = crossover(parent_a.brain, parent_b.brain)
         mutate(child_brain, mutation_rate=0.01)
         self.next_brain = child_brain
 
-    def serialize(self):
-        return {
+    def to_dict(self, lite=True) -> dict:
+        as_dict = {
             "id": self.id,
             "width": self.width,
             "height": self.height,
+            "engine": self.engine.to_dict(),
             "fitness": self.fitness,
-            "brain": self.brain.serialize(),
-            "next_brain": self.next_brain.serialize() if self.next_brain else None,
-            "engine": self.engine.serialize(),
         }
 
+        if not lite:
+            as_dict["brain"] = self.brain.to_dict()
+            as_dict["next_brain"] = (
+                self.next_brain.to_dict() if self.next_brain else None
+            )
+
+        return as_dict
+
     @classmethod
-    def deserialize(cls, data):
+    def from_dict(cls, data):
         bot = cls(
             data["id"],
             data["width"],
             data["height"],
-            TetrisBrain.deserialize(data["brain"]),
+            TetrisBrain.from_dict(data["brain"]),
         )
         bot.fitness = data["fitness"]
         if data["next_brain"]:
-            bot.next_brain = TetrisBrain.deserialize(data["next_brain"])
-        bot.engine = TetrisEngine.deserialize(data["engine"])
+            bot.next_brain = TetrisBrain.from_dict(data["next_brain"])
+        bot.engine = TetrisEngine.from_dict(data["engine"])
         return bot
-
-    def save(self, name: str) -> None:
-        torch.save(self.brain.state_dict(), f"{name}.pt")
-
-    def load(self, name: str) -> None:
-        self.brain.load_state_dict(torch.load(f"{name}.pt"))

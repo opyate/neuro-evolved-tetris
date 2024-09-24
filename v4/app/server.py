@@ -1,12 +1,9 @@
-import json
 from contextlib import asynccontextmanager
 
 import redis
 from app import driver
-from app.db import db_load_all_dicts, db_load_all_dicts_by_key, db_save_all
-
-# from app.tetris_bot import TetrisBot
-from app.fake_bot import TetrisBot
+from app.db import db_load_all_dicts, db_load_all_dicts_by_key
+from app.tetris_bot import TetrisBot
 from celery import Celery
 from celery.result import AsyncResult
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -157,7 +154,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             if data == "tick":
-                latest_bot_states = "TODO"  # TODO
+                latest_bot_states = db_load_all_dicts_by_key(r, "render_bot")
                 await manager.send(latest_bot_states, websocket)
             else:
                 pass

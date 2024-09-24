@@ -8,14 +8,14 @@ class FakeEngine:
     ):
         self.is_game_over = False
 
-    def to_json(self):
+    def to_dict(self):
         return {"is_game_over": self.is_game_over}
 
     def __repr__(self) -> str:
         return f"FakeEngine(is_game_over={self.is_game_over})"
 
     @classmethod
-    def from_json(cls, data):
+    def from_dict(cls, data):
         engine = cls()
         engine.is_game_over = data["is_game_over"]
         return engine
@@ -45,15 +45,15 @@ class TetrisBot:
         return False
 
     def get_state(self):
-        return {"id": self.id, "state": self.state, "engine": self.engine.to_json()}
+        return {"id": self.id, "state": self.state, "engine": self.engine.to_dict()}
 
-    def to_json(self, lite=True):
-        return {"id": self.id, "state": self.state, "engine": self.engine.to_json()}
+    def to_dict(self, lite=True):
+        return {"id": self.id, "state": self.state, "engine": self.engine.to_dict()}
 
     @classmethod
-    def from_json(cls, data):
+    def from_dict(cls, data):
         bot = cls(data["id"])
         bot.state = data["state"]
-        bot.engine = FakeEngine.from_json(data["engine"])
+        bot.engine = FakeEngine.from_dict(data["engine"])
         bot.engine.is_game_over = data["engine"]["is_game_over"]
         return bot

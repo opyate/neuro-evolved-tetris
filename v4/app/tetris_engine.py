@@ -1,5 +1,5 @@
-from typing import List, Dict, Tuple, Optional
 import random
+from typing import Dict, List, Optional, Tuple
 
 
 class TetrisEngine:
@@ -20,15 +20,24 @@ class TetrisEngine:
         self.wall_kick_cache: Dict[str, bool] = {}  # to prevent hovering pieces
         self.shapes: Dict[str, List[List[List[int]]]] = self.get_shapes()
         self.scores: List[int] = [0, 100, 300, 500, 800]
-        self.generate_new_piece()  # Start with a piece
-        self.update_grid()
+        self.is_new_game: bool = True
 
     def to_dict(self) -> Dict:
         return {
+            "width": self.width,
+            "height": self.height,
             "score": self.total_score,
-            "isGameOver": self.is_game_over,
+            "is_game_over": self.is_game_over,
             "grid": self.grid,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict) -> "TetrisEngine":
+        engine: TetrisEngine = cls(data["width"], data["height"])
+        engine.total_score = data["score"]
+        engine.is_game_over = data["is_game_over"]
+        engine.grid = data["grid"]
+        return engine
 
     def get_shapes(self) -> Dict[str, List[List[List[int]]]]:
         return {
@@ -180,6 +189,12 @@ class TetrisEngine:
     def move_piece(self, move: str) -> None:
         if self.is_game_over or not self.current_piece:
             return
+
+        if self.is_new_game:
+            self.is_new_game = False
+            self.generate_new_piece()  # Start with a piece
+            self.update_grid()
+
         self.moves_made.append(move)
 
         if self.has_repetitions():

@@ -9,10 +9,8 @@ from multiprocessing import process
 
 import redis
 from app.db import db_save_all_dict
-
-# from app.tetris_bot import TetrisBot
-from app.fake_bot import TetrisBot
-from app.worker_util import crossover_with_fittest, weighted_selection
+from app.tetris_bot import TetrisBot
+from app.worker_util import crossover_with_fittest
 from celery import Celery
 
 celery = Celery(__name__)
@@ -39,10 +37,28 @@ def bots_next_round(self, results):
 
     bot_dicts = [bot for results_chunk in results for bot in results_chunk["bots_dict"]]
 
-    # TODO crossover and mutation, re-init, before saving to Redis
-    # fake re-init:
-    for bot in bot_dicts:
-        bot["engine"]["is_game_over"] = False
+    # crossover and mutation, re-init, before saving to Redis
+    bots = [TetrisBot.from_dict(bot) for bot in bot_dicts]
+
+    total_fitness = sum(bot.fitness for bot in bots)
+    # mean_fitness = total_fitness / len(bots)
+    # min_fitness = min(bot.fitness for bot in bots)
+    # max_fitness = max(bot.fitness for bot in bots)
+    # # number of bots with score > 0
+    # scorer_count = sum(1 for bot in bots if bot.engine.total_score > 0)
+
+    # log = f"{scorer_count},{mean_fitness:.2f},{min_fitness:.2f},{max_fitness:.2f}"
+    # print(
+    #     log,
+    #     flush=True,
+    # )
+
+    for bot in bots:
+        crossover_with_fittest(bot, bots, total_fitness)
+    for bot in bots:
+        bot.reinit()
+
+    bot_dicts = [bot.to_dict(lite=False) for bot in bots]
 
     bot_id_0 = [bot for bot in bot_dicts if bot["id"] == 0]
     print(
@@ -67,7 +83,7 @@ def bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
     if len(bots) == 0:
         return "no_bots"
     # deserialize bots
-    bots = [TetrisBot.from_json(bot) for bot in bots]
+    bots = [TetrisBot.from_dict(bot) for bot in bots]
 
     try:
         return _bots_think_then_move(self, bots, bot_opts)
@@ -96,7 +112,7 @@ def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
             # update_state is not useful for our use-case, so we use redis directly instead
             # self.update_state(state="PROGRESS", meta=meta)
             db_result = db_save_all_dict(
-                r, [bot.to_json(lite=True) for bot in bots], "render_bot"
+                r, [bot.to_dict(lite=True) for bot in bots], "render_bot"
             )
             if not db_result:
                 raise Exception("Failed to save render_bots to Redis")
@@ -114,7 +130,7 @@ def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
                         "loop": loop_count,
                         "event": event_count,
                     },
-                    "bots_dict": [bot.to_json(lite=False) for bot in bots],
+                    "bots_dict": [bot.to_dict(lite=False) for bot in bots],
                 }
 
 

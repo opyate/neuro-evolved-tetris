@@ -1,7 +1,6 @@
 import multiprocessing
 
-# from app.tetris_bot import TetrisBot
-from app.fake_bot import TetrisBot
+from app.tetris_bot import TetrisBot
 from app.worker import bots_next_round, bots_think_then_move
 from celery import chord
 from celery.result import AsyncResult
@@ -27,7 +26,9 @@ def main(bots: list[TetrisBot] | list[dict]) -> AsyncResult:
     # Check if the list contains TetrisBot objects
     # if all(isinstance(bot, TetrisBot) for bot in bots):
     if isinstance(bots[0], TetrisBot):
-        bots = [bot.to_json() for bot in bots]
+        bots = [bot.to_dict(lite=False) for bot in bots]
+
+    print(f">>> bot type: {type(bots[0])}, bot: {bots[0]}")
 
     return chord(
         (bots_think_then_move.s(bots_slice) for bots_slice in chunkify(bots, num_cores))

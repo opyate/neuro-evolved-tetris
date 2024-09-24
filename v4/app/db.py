@@ -1,22 +1,20 @@
 import json
 
 import redis
-
-# from app.tetris_bot import TetrisBot
-from app.fake_bot import TetrisBot
+from app.tetris_bot import TetrisBot
 
 # maybe? https://redis.io/docs/latest/develop/connect/clients/python/redis-py/#example-indexing-and-querying-json-documents
 
 
 def db_save(r: redis.Redis, bot: TetrisBot, key: str = "bot"):
     bot_id = bot.id
-    bot_json = bot.to_json()
+    bot_json = bot.to_dict()
     ser_bot = json.dumps(bot_json)
     return r.set(f"{key}:{bot_id}", ser_bot)
 
 
 def db_load(r: redis.Redis, bot_id: int, key: str = "bot") -> TetrisBot:
-    deser_bot = TetrisBot.from_json(json.loads(r.get(f"{key}:{bot_id}")))
+    deser_bot = TetrisBot.from_dict(json.loads(r.get(f"{key}:{bot_id}")))
     return deser_bot
 
 
@@ -47,7 +45,7 @@ def db_load_all(
             pipe.get(f"{key}:{bot_id}")
         serialized_bots = pipe.execute()
     bots = [
-        TetrisBot.from_json(json.loads(bot_data))
+        TetrisBot.from_dict(json.loads(bot_data))
         for bot_data in serialized_bots
         if bot_data is not None
     ]
