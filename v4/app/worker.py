@@ -1,13 +1,18 @@
 import concurrent.futures
 import os
 import sys
+import time
 import traceback
+import urllib.request
 from enum import Enum
-from itertools import chain
-from typing import Dict, List
+from multiprocessing import process
+
+import redis
 
 # from app.tetris_bot import TetrisBot
+from app.db import db_save_all_dict
 from app.fake_bot import TetrisBot
+from app.sandbox import bot
 from app.worker_util import crossover_with_fittest, weighted_selection
 from celery import Celery
 
@@ -18,6 +23,9 @@ celery.conf.result_backend = os.environ.get(
 )
 
 
+r = redis.Redis(host="redis", port=6379, db=0)
+
+
 class EventType(Enum):
     TICK = "tick"
     MEGATICK = "megatick"
@@ -26,8 +34,35 @@ class EventType(Enum):
 events = [EventType.TICK] * 8 + [EventType.MEGATICK] * 1
 
 
+@celery.task(name="bots_next_round", bind=True)
+def bots_next_round(self, results):
+
+    bot_dicts = [bot for results_chunk in results for bot in results_chunk["bots_dict"]]
+
+    # TODO crossover and mutation, re-init, before saving to Redis
+    # fake re-init:
+    for bot in bot_dicts:
+        bot["engine"]["is_game_over"] = False
+
+    bot_id_0 = [bot for bot in bot_dicts if bot["id"] == 0]
+    print(
+        f">bots_next_round: {bot_id_0}",
+        flush=True,
+    )
+    db_result = db_save_all_dict(r, bot_dicts)
+    if not db_result:
+        raise Exception("Failed to save bots to Redis")
+
+    time.sleep(10)
+
+    print(f"worker pinging server to start next round", flush=True)
+    return urllib.request.urlopen(
+        f"http://web:8000/start?n={len(bot_dicts)}&f={self.request.id}"
+    ).read()
+
+
 @celery.task(name="bots_think_then_move", bind=True)
-def bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
+def bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
     if len(bots) == 0:
         return "no_bots"
     # deserialize bots
@@ -39,11 +74,11 @@ def bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
         task_id = self.request.id
         print(f"Exception: task={task_id}, exception={e}", flush=True)
         print(traceback.format_exc(), flush=True)
-        # self.update_state(state="FAILURE", meta={"error": str(e)})
+        self.update_state(state="FAILURE", meta={"error": str(e)})
         raise e
 
 
-def _bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
+def _bots_think_then_move(self, bots: list[TetrisBot], bot_opts: dict = None):
     if bot_opts is None:
         bot_opts = {}
 
@@ -55,14 +90,15 @@ def _bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
         for event in events:
             event_count += 1
 
-            results = process_event(bots, event)
+            process_event(bots, event)
 
             meta = {
                 "count": {
                     "loop": loop_count,
                     "event": event_count,
                 },
-                "results": results,
+                # TODO light serialisation, only for rendering
+                "bots_dict": [bot.to_json() for bot in bots],
             }
             self.update_state(state="PROGRESS", meta=meta)
 
@@ -70,27 +106,31 @@ def _bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
             all_game_over = all(bot.engine.is_game_over for bot in bots)
 
             if all_game_over:
+                bot_id_0 = [bot for bot in bots if bot.id == 0]
+                if bot_id_0:
+                    print(f">all_game_over: {bot_id_0}", flush=True)
                 meta["all_game_over"] = True
-                meta["version"] = 2
+                # TODO full serialisation, for crossover/mutation/etc
                 return meta
 
 
-# Function to handle a chunk of bots' events
-def process_event(bots: List[TetrisBot], event: EventType) -> List[tuple[Dict, bool]]:
+def process_event(bots: list[TetrisBot], event: EventType):
+    """For each bot, think and move based on the event.
+
+    Returns nothing, as the bots are mutated in place.
+    """
     do_tick = event == EventType.MEGATICK
-    results = []
 
     for bot in bots:
-        moved = bot.think_then_move(do_tick)
-        bot_state = bot.to_json()
-        # results.append((bot_state, moved))
-        results.append(bot_state)
-
-    return results
+        # if bot.id == 0:
+        #     print(f">bot_before: {bot}", flush=True)
+        bot.think_then_move(do_tick)
+        # if bot.id == 0:
+        #     print(f">bot_after: {bot}", flush=True)
 
 
 def when_all_game_over(
-    bots: List[TetrisBot],
+    bots: list[TetrisBot],
     executor: concurrent.futures.Executor,
     loop_count: int = 0,
 ):

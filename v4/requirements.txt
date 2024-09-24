@@ -4,3 +4,4 @@ celery==5.4.0
 redis==5.0.8
 flower==1.2.0
 watchdog==5.0.2
+redis==5.0.8

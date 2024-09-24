@@ -1,12 +1,10 @@
-import math
 import multiprocessing
-import random
-import time
 
 # from app.tetris_bot import TetrisBot
 from app.fake_bot import TetrisBot
-from app.worker import bots_think_then_move
-from celery import Celery, group
+from app.worker import bots_next_round, bots_think_then_move
+from celery import chord
+from celery.result import AsyncResult
 
 
 def chunkify(lst, n):
@@ -14,17 +12,28 @@ def chunkify(lst, n):
     return [lst[i::n] for i in range(n)]
 
 
-def main(number_of_bots: int, bot_opts: dict = None):
+def main(bots: list[TetrisBot] | list[dict]):
 
-    bots = [TetrisBot(bot_id, **bot_opts) for bot_id in range(number_of_bots)]
-    # serialize bots
-    bots = [bot.to_json() for bot in bots]
+    # Check if the list contains TetrisBot objects
+    if isinstance(bots[0], TetrisBot):
+        # if all(isinstance(bot, TetrisBot) for bot in bots):
+        # Serialize bots if they are TetrisBot objects
+        bots = [bot.to_json() for bot in bots]
 
+    return _main(bots)
+
+
+def _main(bots) -> AsyncResult:
     num_cores = multiprocessing.cpu_count()
 
-    # Create a group of Celery tasks for each chunk
-    job = group(
-        bots_think_then_move.s(bots_slice) for bots_slice in chunkify(bots, num_cores)
-    )
+    # return chord(
+    #     (
+    #         bots_think_then_move.s(bots_slice)
+    #         for bots_slice in chunkify(bots, num_cores)
+    #     ),
+    #     bots_next_round.s(),
+    # ).apply_async()
 
-    return job
+    return chord(
+        (bots_think_then_move.s(bots_slice) for bots_slice in chunkify(bots, num_cores))
+    )(bots_next_round.s())

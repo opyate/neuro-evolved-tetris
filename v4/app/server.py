@@ -1,4 +1,10 @@
+import json
+from contextlib import asynccontextmanager
+
+import redis
 from app import driver
+from app.db import db_load_all_dicts, db_save_all
+from app.fake_bot import TetrisBot
 from celery.result import AsyncResult
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -7,8 +13,8 @@ from starlette.responses import Response
 from starlette.types import Scope
 
 latest_bot_states = {}
-job = None
 result = None
+r: redis.Redis = None
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -21,7 +27,24 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global r
+    r = redis.Redis(host="redis", port=6379, db=0)
+
+    # smoke test redis:
+    # bot_ids = bots = [bot_id for bot_id in range(3)]
+    # bots = [TetrisBot(bot_id) for bot_id in bot_ids]
+    # print(bots)
+    # print("save:")
+    # print(db_save_all(r, bots))
+    # print("load:")
+    # print(db_load_all(r, bot_ids))
+
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 
 
@@ -38,37 +61,43 @@ async def root():
 @app.get("/tasks/{task_id}")
 def get_status(task_id):
     task_result = AsyncResult(task_id)
-    result = {
+    dict_result = {
         "task_id": task_id,
         "task_status": task_result.status,
         "task_result": task_result.result,
     }
-    return JSONResponse(result)
+    return JSONResponse(dict_result)
 
 
 @app.get("/start")
-async def start(n: int = 10):
-    global job
+async def start(n: int = 10, f: str = ""):
+    global result
 
-    if job is None:
+    if result is None:
 
         bot_opts = {"width": 10, "height": 10}
-        job = driver.main(n, bot_opts)
-
-        # Run the group of tasks
-        global result
-        result = job.apply_async()
+        bots = [TetrisBot(bot_id, **bot_opts) for bot_id in range(n)]
+        result = driver.main(bots)
 
         return {"message": f"Started {n} bots"}
     else:
-        return {"message": "Already started"}
+
+        bots = db_load_all_dicts(r, range(n))
+        result = driver.main(bots)
+
+        return {"message": f"Next round for {n} bots"}
+
+
+@app.get("/ping")
+async def ping():
+    print(f"I've been pinged, redis: {r.ping()}")
+    return {"message": "pong"}
 
 
 @app.get("/job")
 async def job_state():
     global result
     if result is not None:
-
         result_get = "waiting..."
         is_all_game_over = False
         if result.successful():
@@ -81,8 +110,8 @@ async def job_state():
             "ready": result.ready(),
             "successful": result.successful(),
             "failed": result.failed(),
-            "waiting": result.waiting(),
-            "completed_count": result.completed_count(),
+            # "waiting": result.waiting(),
+            # "completed_count": result.completed_count(),
             "is_all_game_over": is_all_game_over,
             "result": result_get,
         }
