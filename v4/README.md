@@ -22,7 +22,7 @@ echo PYTHONPATH=$(pwd) > .env
 # Run
 
 ```
-fastapi dev app/server.py
+docker compose up
 ```
 
 Then visit

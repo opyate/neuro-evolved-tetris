@@ -23,11 +23,13 @@ class EventType(Enum):
     MEGATICK = "megatick"
 
 
-events = chain.from_iterable([[EventType.TICK] * 8, [EventType.MEGATICK] * 1])
+events = [EventType.TICK] * 8 + [EventType.MEGATICK] * 1
 
 
-@celery.task(name="bots_think_then_move", bind=True)  # , base=BotsThinkThenMove)
+@celery.task(name="bots_think_then_move", bind=True)
 def bots_think_then_move(self, bots: List[TetrisBot], bot_opts: dict = None):
+    if len(bots) == 0:
+        return "no_bots"
     # deserialize bots
     bots = [TetrisBot.from_json(bot) for bot in bots]
 

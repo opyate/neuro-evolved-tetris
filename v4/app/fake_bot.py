@@ -31,8 +31,8 @@ class TetrisBot:
         if not self.engine.is_game_over:
             rnd = random.random()
             self.state.append(rnd)
-            time.sleep(rnd)
-            self.engine.is_game_over = random.random() < 0.4
+            time.sleep(rnd / 100)
+            self.engine.is_game_over = rnd < 0.01
             return True
         return False
 

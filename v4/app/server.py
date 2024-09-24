@@ -38,6 +38,7 @@ async def root():
 @app.get("/tasks/{task_id}")
 def get_status(task_id):
     task_result = AsyncResult(task_id)
+    print()
     result = {
         "task_id": task_id,
         "task_status": task_result.status,
@@ -83,7 +84,7 @@ async def job_state():
     global result
     if result is not None:
 
-        result_get = "no result"
+        result_get = "waiting..."
         is_all_game_over = False
         if result.successful():
             # global result
