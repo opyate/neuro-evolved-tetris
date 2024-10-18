@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 from app.tetris_brain import TetrisBrain, crossover, mutate
 from app.tetris_engine import TetrisEngine
 
@@ -84,12 +85,10 @@ class TetrisBot:
 
         self.engine.move_piece(move)
 
-        # Incentivise movement
-        if move != "noop":
-            self.fitness += 1
+        # Incentivise longevity
+        self.fitness += 1
 
         if do_tick:
-            # Incentivise longevity
             self.fitness += 1
             self.engine.tick()
             self.fitness += self.engine.score_for_current_tick

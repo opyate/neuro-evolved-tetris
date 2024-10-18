@@ -145,7 +145,7 @@ class TetrisEngine:
             return False
 
         last_move: str = self.moves_made[-1]
-        if last_move in ["up", "down"]:
+        if last_move in ["up", "down", "noop", "left", "right"]:
             return False
 
         last_N_moves: List[str] = self.moves_made[-N:]
@@ -157,7 +157,7 @@ class TetrisEngine:
             return False
 
         last_move: str = self.moves_made[-1]
-        if last_move in ["up", "down"]:
+        if last_move in ["up", "down", "noop", "left", "right"]:
             return False
 
         last_N_moves: List[str] = self.moves_made[-N:]
@@ -205,6 +205,9 @@ class TetrisEngine:
         self.moves_made.append(move)
 
         if self.has_repetitions():
+            # I thought about slamming the bot down (set move to "up") if
+            # it gets into a repetitive state, but that would technically
+            # not be what the network predicted, so we just kill it.
             self.is_game_over = True
             self.update_grid()
             return

@@ -53,9 +53,9 @@ curl -O https://raw.githubusercontent.com/redis/redis/refs/tags/7.4.0/redis.conf
 I am building a neuro-evolutionary simulation of bots learning to play Tetris using Python and PyTorch, which does the following:
 
 - spawn thousands of bots from the simulation runner, and have a bots_list of size N
-- the bots are initialised with a zeroed PyTorch network, which has 10x20 inputs, and 7 outputs
+- the bots are initialised with a zeroed PyTorch network, which has 10x20 inputs, and 6 outputs
 - each bot has a state, in the form of a Tetris engine
-- the PyTorch network's inputs represent the Tetris grid, and the 7 outputs represent the 7 moves a bot can make: up, down, left, right, rotate_clockwise, rotate_counter_clockwise, or noop (which means "make no move", or "no operation")
+- the PyTorch network's inputs represent the Tetris grid, and the 6 outputs represent the 6 moves a bot can make: up, down, left, right, rotate_clockwise, rotate_counter_clockwise or noop (which means "make no move", or "no operation")
 - the simulation loop now starts, and the runner asks each bot to predict their next move
 - after each bot made their move, they get one fitness point for staying alive, and many more fitness points for scoring (i.e. clearing lines on the Tetris grid)
 - after each bot made their move, they might also be in a game over state
