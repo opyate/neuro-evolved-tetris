@@ -1,37 +1,3 @@
-# import matplotlib.pyplot as plt
-# import numpy as np
-
-# # Open the log file and read the first float from each relevant line
-# """
-# INFO:root:loop_count=13, event_count=6
-# INFO:root:max_fitness: 371.0, min_fitness: 2.0, mean_fitness: 40.06333333333333
-# INFO:root:loop_count=18, event_count=9
-# INFO:root:max_fitness: 310.0, min_fitness: 2.0, mean_fitness: 46.163333333333334
-# """
-# with open("logs/worker-0") as f:
-#     values = [
-#         float(line.split("[")[1].split(",")[0]) for line in f if "top_n_fitness" in line
-#     ]
-
-# # Set the figure size for a high-resolution 1920x1080 plot (approx. 16:9 ratio)
-# plt.figure(figsize=(19.2, 10.8), dpi=100)
-
-# # Plot the original values
-# plt.plot(values, label="Original")
-
-# # Calculate and plot the moving average
-# for maco in [(20, "yellow"), (50, "orange"), (100, "red")]:
-#     ma, color = maco
-#     moving_avg = np.convolve(values, np.ones(ma) / ma, mode="valid")
-#     plt.plot(
-#         range(len(moving_avg)), moving_avg, label=f"Moving Average ({ma})", color=color
-#     )
-
-# # Add legend and save the plot
-# plt.legend()
-# plt.savefig("plot.png")
-
-
 import glob
 
 import matplotlib.pyplot as plt

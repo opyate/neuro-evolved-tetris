@@ -8,7 +8,7 @@ function setup() {
     background(255);
 
     // start the simulation
-    const url = "/start?n=" + NUMBER_OF_GAMES;
+    const url = "/start?n=" + NUMBER_OF_BOTS;
     fetch(url)
         .then(response => response.json())
         .then(data => {
@@ -48,7 +48,7 @@ function draw() {
             // if (bot.id == 0) {
             //     console.log(`loop ${state["loop_count"]}, event ${state["event_count"]} -> ${bot.debug}`);
             // }
-            drawGame(bot, bot.id);
+            drawGame(bot, idx);
         }
     }
 }

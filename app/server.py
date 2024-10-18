@@ -1,10 +1,6 @@
 import os
-import time
 from contextlib import asynccontextmanager
 
-import redis
-from app.db_without_pipelines import db_load_all_dicts, db_load_all_dicts_by_key
-from app.tetris_bot import TetrisBot
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, RedirectResponse
@@ -12,9 +8,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 from starlette.types import Scope
 
+import redis
+from app.db_without_pipelines import db_load_all_dicts_by_key
+
 load_dotenv()
 NUMBER_OF_WORKERS = int(os.getenv("NUMBER_OF_WORKERS", 1))
 BOTS_PER_WORKER = int(os.getenv("BOTS_PER_WORKER", 1))
+number_of_bots_to_render = NUMBER_OF_WORKERS * BOTS_PER_WORKER
 r: redis.Redis = None
 
 
@@ -57,9 +57,14 @@ async def favicon():
 @app.get("/")
 async def root(request: Request):
 
-    if "n" not in request.query_params:
-        n = NUMBER_OF_WORKERS * BOTS_PER_WORKER
-        return RedirectResponse(url=f"/?n={n}")
+    global number_of_bots_to_render
+    if "render" not in request.query_params:
+        number_of_bots_to_render = NUMBER_OF_WORKERS * BOTS_PER_WORKER
+        return RedirectResponse(url=f"/?render={number_of_bots_to_render}")
+    else:
+        number_of_bots_to_render = int(
+            request.query_params.get("render", NUMBER_OF_WORKERS * BOTS_PER_WORKER)
+        )
 
     return FileResponse("static/index.html")
 
@@ -78,7 +83,9 @@ async def ping():
 @app.get("/state")
 async def state():
 
-    latest_bot_states = db_load_all_dicts_by_key(r, "render_bot")
+    latest_bot_states = db_load_all_dicts_by_key(
+        r, "render_bot", number_of_bots_to_render
+    )
 
     return {"message": "Latest bot states", "latest_bot_states": latest_bot_states}
 
@@ -90,7 +97,9 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             if data == "tick":
-                latest_bot_states = db_load_all_dicts_by_key(r, "render_bot")
+                latest_bot_states = db_load_all_dicts_by_key(
+                    r, "render_bot", number_of_bots_to_render
+                )
                 await manager.send(latest_bot_states, websocket)
             else:
                 pass

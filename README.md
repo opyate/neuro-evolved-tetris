@@ -14,22 +14,6 @@ Server: interface between client and workers
 Worker: Docker scaled workers, with light-weight Redis-backed coordinator, and will each run hundreds of brains, and use Redis-backed store for crossover and mutation.
 Client: p5/canvas HTML to render simulations, and getting board states through web socket.
 
-# Setup
-
-```
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip3 install torch --index-url https://download.pytorch.org/whl/cu124
-echo PYTHONPATH=$(pwd) > .env
-```
-
-Got redis.conf from:
-
-```
-curl -O https://raw.githubusercontent.com/redis/redis/refs/tags/7.4.0/redis.conf 
-```
-
 # Run
 
 Copy the `.env`:
@@ -48,6 +32,21 @@ Then visit
 
 http://127.0.0.1:8000/
 
+
+# Development setup
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip3 install torch --index-url https://download.pytorch.org/whl/cu124
+```
+
+Got redis.conf from:
+
+```
+curl -O https://raw.githubusercontent.com/redis/redis/refs/tags/7.4.0/redis.conf 
+```
 
 # Task definition
 

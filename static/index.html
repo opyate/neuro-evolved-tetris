@@ -15,10 +15,12 @@
     <script src="static/util.js"></script>
     <script>
         const BLOCK_SIZE_PIXELS = 5;
-        const NUMBER_OF_GAMES = parseInt(new URLSearchParams(window.location.search).get('n')) || 16;
+        // the actual number of bots in worker processes are determined by .env, but the
+        // 'render' param determines how many bots are rendered in the browser
+        const NUMBER_OF_BOTS = parseInt(new URLSearchParams(window.location.search).get('render')) || 16;
         const WIDTH = 10;
         const HEIGHT = 10;
-        const gridSize = calculateGridSize(NUMBER_OF_GAMES, window.innerWidth, window.innerHeight);
+        const gridSize = calculateGridSize(NUMBER_OF_BOTS, window.innerWidth, window.innerHeight);
         const COLS = gridSize.gridWidth;
         const ROWS = gridSize.gridHeight;
     </script>

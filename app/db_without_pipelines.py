@@ -58,8 +58,14 @@ def db_load_all_dicts(
     return bots
 
 
-def db_load_all_dicts_by_key(r: redis.Redis, key: str = "bot") -> list[dict]:
-    keys = r.keys(f"{key}:*")
+def db_load_all_dicts_by_key(
+    r: redis.Redis, key: str = "bot", number_of_bots_to_render: int = -1
+) -> list[dict]:
+    keys = sorted(r.keys(f"{key}:*"))
+
+    if number_of_bots_to_render > 0:
+        keys = keys[:number_of_bots_to_render]
+
     bots = []
     for key in keys:
         bot_data = r.get(key)
