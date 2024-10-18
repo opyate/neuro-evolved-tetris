@@ -41,3 +41,15 @@ services:
     - ./redis:/usr/local/etc/redis
     ports:
       - 6379:6379
+
+  janitor:
+    build:
+      context: janitor
+      dockerfile: Dockerfile
+    command: python app/main.py
+    volumes:
+      - ./janitor:/usr/src/app/app
+    environment:
+      - PYTHONPATH=/usr/src/app
+    depends_on:
+      - redis

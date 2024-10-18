@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 from app.tetris_brain import TetrisBrain, crossover, mutate
 from app.tetris_engine import TetrisEngine
 
@@ -76,20 +77,16 @@ class TetrisBot:
 
         # Get the move with the highest probability
         move_index = torch.argmax(results).item()
-        move = ["left", "right", "up", "down", "rotate_cw", "rotate_ccw", "noop"][
-            move_index
-        ]
+        move = ["left", "right", "up", "down", "rotate_cw", "rotate_ccw"][move_index]
 
         # print(f"Bot {self.id} move: {move}, tick: {do_tick}")
 
         self.engine.move_piece(move)
 
-        # Incentivise movement
-        if move != "noop":
-            self.fitness += 1
+        # Incentivise longevity
+        self.fitness += 1
 
         if do_tick:
-            # Incentivise longevity
             self.fitness += 1
             self.engine.tick()
             self.fitness += self.engine.score_for_current_tick

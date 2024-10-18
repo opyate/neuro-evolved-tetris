@@ -7,7 +7,7 @@ class TetrisBrain(nn.Module):
         super(TetrisBrain, self).__init__()
         self.fc1 = nn.Linear(width * height, 16)
         self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(16, 7)  # Output: 7 possible moves
+        self.fc2 = nn.Linear(16, 6)  # Output: 6 possible moves
         self.softmax = nn.Softmax(dim=1)  # For probability distribution
 
     def forward(self, x):
