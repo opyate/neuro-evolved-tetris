@@ -65,33 +65,44 @@ class TetrisBot:
                 index += 1
         return inputs
 
-    def think_then_move(self, do_tick: bool = False) -> bool:
+    def think_then_move(self, is_game_tick: bool = False) -> bool:
+        """Think then move.
+
+        Think = predict the next move via TetrisBrain.
+        Move = make that move via TetrisEngine.
+
+        Args:
+            is_game_tick (bool, optional): whether this is a game tick or a player move. Defaults to False.
+
+        Returns:
+            bool: true if the game is not over, false otherwise
+        """
         if self.engine.is_game_over:
             return False
-
-        inputs = self.get_game_state_as_inputs().unsqueeze(0)  # Add batch dimension
-
-        this = self
-        with torch.no_grad():
-            results = this.brain(inputs)
-
-        # Get the move with the highest probability
-        move_index = torch.argmax(results).item()
-        move = ["left", "right", "up", "down", "rotate_cw", "rotate_ccw", "noop"][
-            move_index
-        ]
-
-        # print(f"Bot {self.id} move: {move}, tick: {do_tick}")
-
-        self.engine.move_piece(move)
 
         # Incentivise longevity
         self.fitness += 1
 
-        if do_tick:
-            self.fitness += 1
+        if is_game_tick:
             self.engine.tick()
-            self.fitness += self.engine.score_for_current_tick
+        else:
+            inputs = self.get_game_state_as_inputs().unsqueeze(0)  # Add batch dimension
+
+            this = self
+            with torch.no_grad():
+                results = this.brain(inputs)
+
+            # Get the move with the highest probability
+            move_index = torch.argmax(results).item()
+            move = ["left", "right", "up", "down", "rotate_cw", "rotate_ccw", "noop"][
+                move_index
+            ]
+
+            self.engine.move_piece(move)
+
+        # engine.tick() or move="up" may or may not call engine.clear_lines(),
+        # so tally any new scores if they exist
+        self.fitness += self.engine.score_for_current_tick / 10
 
         return True
 

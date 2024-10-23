@@ -20,6 +20,7 @@ class TetrisEngine:
         self.bag: List[str] = []  # For "bag of seven" piece generation
         self.score_for_current_tick: int = 0
         self.total_score: int = 0
+        self.cleared_lines: int = 0
         self.is_game_over: bool = False
         self.moves_made: List[str] = []
         self.count_ticks: int = 0
@@ -175,7 +176,7 @@ class TetrisEngine:
         if self.is_game_over or not self.current_piece:
             return
         self.count_ticks += 1
-        self.score_for_current_tick = 0
+        self.score_for_current_tick = 0  # set in clear_lines() below
 
         if self.is_valid_move(
             self.current_piece["x"],
@@ -310,6 +311,7 @@ class TetrisEngine:
 
         self.score_for_current_tick = self.scores[len(full_row_indices)]
         self.total_score += self.score_for_current_tick
+        self.cleared_lines += len(full_row_indices)
 
     def get_piece_shape(self, type: str, rotation: int) -> List[List[int]]:
         return self.shapes[type][rotation]

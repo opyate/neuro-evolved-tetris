@@ -66,3 +66,7 @@ I am building a neuro-evolutionary simulation of bots learning to play Tetris us
 - set each bot's next_brain to the new child
 - the entire bots_list is re-initialised so their next_brain becomes their current_brain
 - the simulation loops
+
+# Future
+
+- https://github.com/joerick/pyinstrument to find slow spots in code

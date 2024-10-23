@@ -56,29 +56,29 @@ plt.figure(figsize=(19.2, 10.8), dpi=100)
 # Plot fitness values
 
 max_fitness_moving_avg = np.convolve(max_fitness, np.ones(20) / 20, mode="valid")
-# plt.plot(max_fitness, label="Max Fitness", color="tab:blue")
+plt.plot(max_fitness, label="Max Fit", color="lightblue")
 plt.plot(
     range(len(max_fitness_moving_avg)),
     max_fitness_moving_avg,
-    label="Max Fitness",
+    label="Max Fit (avg20)",
     color="tab:blue",
 )
 
 mean_fitness_moving_avg = np.convolve(mean_fitness, np.ones(20) / 20, mode="valid")
-# plt.plot(mean_fitness, label="Mean Fitness", color="tab:cyan")
+plt.plot(mean_fitness, label="Mean Fit", color="paleturquoise")
 plt.plot(
     range(len(mean_fitness_moving_avg)),
     mean_fitness_moving_avg,
-    label="Mean Fitness",
+    label="Mean Fit (avg20)",
     color="tab:cyan",
 )
 
 min_fitness_moving_avg = np.convolve(min_fitness, np.ones(20) / 20, mode="valid")
-# plt.plot(min_fitness, label="Min Fitness", color="tab:purple")
+plt.plot(min_fitness, label="Min Fit", color="thistle")
 plt.plot(
     range(len(min_fitness_moving_avg)),
     min_fitness_moving_avg,
-    label="Min Fitness",
+    label="Min Fit (avg20)",
     color="tab:purple",
 )
 
@@ -86,11 +86,11 @@ plt.plot(
 max_loop_counts_moving_avg = np.convolve(
     max_loop_counts, np.ones(20) / 20, mode="valid"
 )
-# plt.plot(max_loop_counts, label="Max Loop Count", color="tab:pink")
+plt.plot(max_loop_counts, label="Max Move Count", color="pink")
 plt.plot(
     range(len(max_loop_counts_moving_avg)),
     max_loop_counts_moving_avg,
-    label="Max Loop Count",
+    label="Max Move Count (avg20)",
     color="tab:pink",
 )
 

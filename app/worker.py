@@ -5,6 +5,8 @@ import socket
 import traceback
 from enum import Enum
 
+from dotenv import load_dotenv
+
 import redis
 from app.coordinator import Coordinator
 from app.db import (
@@ -13,10 +15,10 @@ from app.db import (
     db_save_all_dict,
     db_write_bots_fitness,
 )
+from app.scoring import fill_score
 from app.tetris_bot import TetrisBot
 from app.tetris_engine import TetrisEngine
 from app.worker_util import weighted_selection
-from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -27,11 +29,12 @@ r = redis.Redis(host="redis", port=6379, db=0)
 
 
 class EventType(Enum):
-    TICK = "tick"
-    MEGATICK = "megatick"
+    TICK_PLAYER = "tick_player"  # player moves
+    TICK_GAME = "tick_game"  # game tick (e.g. once a second for Tetris)
 
 
-events = [EventType.TICK] * 8 + [EventType.MEGATICK] * 1
+# allow 8 player moves before the game forces the piece down one row
+events = [EventType.TICK_PLAYER] * 8 + [EventType.TICK_GAME] * 1
 
 
 def crossover_with_fittest(bots: list[TetrisBot]):
@@ -102,10 +105,10 @@ def bots_think_then_move(bots: list[TetrisBot]):
         bot.engine = TetrisEngine(bot.width, bot.height)
 
     loop_count = 0
+    event_count = 0
     while True:
         loop_count += 1
 
-        event_count = 0
         for event in events:
             event_count += 1
 
@@ -115,6 +118,13 @@ def bots_think_then_move(bots: list[TetrisBot]):
             all_game_over = all(bot.engine.is_game_over for bot in bots)
 
             if all_game_over:
+                # adjusts each bot's fitness by its fill_score
+                bot_fill_scores = []
+                for bot in bots:
+                    bot_fill_score = fill_score(bot.engine.grid)
+                    bot.fitness += bot_fill_score
+                    bot_fill_scores.append(bot_fill_score)
+
                 db_result = db_save_all_dict(
                     r, [bot.to_dict(with_weights=False) for bot in bots], "render_bot"
                 )
@@ -131,6 +141,26 @@ def bots_think_then_move(bots: list[TetrisBot]):
                 db_write_bots_fitness(r, bots)
 
                 log(f"loop_count={loop_count}, event_count={event_count}")
+
+                # log the fill_scores
+                max_fill_score = max(bot_fill_scores)
+                min_fill_score = min(bot_fill_scores)
+                mean_fill_score = sum(bot_fill_scores) / len(bot_fill_scores)
+                log(
+                    f"max_fill_score: {max_fill_score}, min_fill_score: {min_fill_score}, mean_fill_score: {mean_fill_score}"
+                )
+
+                # log the cleared lines
+                cleared_lines = []
+                for bot in bots:
+                    cleared_lines.append(bot.engine.cleared_lines)
+                max_cleared_lines = max(cleared_lines)
+                min_cleared_lines = min(cleared_lines)
+                mean_cleared_lines = sum(cleared_lines) / len(cleared_lines)
+                log(
+                    f"max_cleared_lines: {max_cleared_lines}, min_cleared_lines: {min_cleared_lines}, mean_cleared_lines: {mean_cleared_lines}"
+                )
+
                 return
             else:
 
@@ -151,14 +181,10 @@ def process_event(bots: list[TetrisBot], event: EventType):
 
     Returns nothing, as the bots are mutated in place.
     """
-    do_tick = event == EventType.MEGATICK
+    is_game_tick = event == EventType.TICK_GAME
 
     for bot in bots:
-        # if bot.id == 0:
-        #     logging.info(f">bot_before: {bot}")
-        bot.think_then_move(do_tick)
-        # if bot.id == 0:
-        #     logging.info(f">bot_after: {bot}")
+        bot.think_then_move(is_game_tick)
 
 
 def log(msg: str):
